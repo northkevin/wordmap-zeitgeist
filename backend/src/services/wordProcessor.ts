@@ -8,6 +8,7 @@ interface Post {
 }
 
 const STOP_WORDS = new Set([
+  // Common English stop words
   'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
   'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after',
   'above', 'below', 'between', 'among', 'is', 'are', 'was', 'were', 'be', 'been',
@@ -17,7 +18,68 @@ const STOP_WORDS = new Set([
   'my', 'your', 'his', 'her', 'its', 'our', 'their', 'what', 'which', 'who',
   'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more',
   'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same',
-  'so', 'than', 'too', 'very', 'just', 'now', 'here', 'there', 'then', 'once'
+  'so', 'than', 'too', 'very', 'just', 'now', 'here', 'there', 'then', 'once',
+  
+  // HTML attributes and common web terms
+  'href', 'src', 'alt', 'title', 'class', 'id', 'style', 'data', 'aria', 'role',
+  'name', 'value', 'placeholder', 'required', 'readonly', 'disabled', 'checked',
+  'type', 'method', 'action', 'target', 'rel', 'content', 'charset', 'lang',
+  'width', 'height', 'border', 'cellpadding', 'cellspacing', 'colspan', 'rowspan',
+  
+  // HTML tags (without brackets)
+  'div', 'span', 'img', 'link', 'meta', 'script', 'style', 'head', 'body', 'html',
+  'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'ul', 'ol', 'li',
+  'form', 'input', 'button', 'select', 'option', 'textarea', 'label', 'fieldset',
+  'nav', 'header', 'footer', 'main', 'section', 'article', 'aside', 'figure',
+  'figcaption', 'details', 'summary', 'dialog', 'canvas', 'svg', 'video', 'audio',
+  
+  // CSS and styling terms
+  'css', 'px', 'em', 'rem', 'vh', 'vw', 'rgb', 'rgba', 'hex', 'color', 'background',
+  'margin', 'padding', 'border', 'font', 'text', 'display', 'position', 'float',
+  'clear', 'overflow', 'visibility', 'opacity', 'transform', 'transition',
+  
+  // JavaScript and programming terms
+  'var', 'let', 'const', 'function', 'return', 'if', 'else', 'for', 'while',
+  'switch', 'case', 'break', 'continue', 'try', 'catch', 'finally', 'throw',
+  'true', 'false', 'null', 'undefined', 'typeof', 'instanceof', 'new', 'delete',
+  
+  // Web protocols and formats
+  'http', 'https', 'ftp', 'mailto', 'tel', 'sms', 'www', 'com', 'org', 'net',
+  'html', 'xml', 'json', 'csv', 'pdf', 'jpg', 'jpeg', 'png', 'gif', 'svg',
+  'mp3', 'mp4', 'avi', 'mov', 'zip', 'rar', 'tar', 'gz',
+  
+  // Common web interface terms
+  'click', 'submit', 'reset', 'cancel', 'ok', 'yes', 'no', 'save', 'delete',
+  'edit', 'view', 'show', 'hide', 'open', 'close', 'next', 'prev', 'previous',
+  'first', 'last', 'home', 'back', 'forward', 'refresh', 'reload', 'search',
+  'filter', 'sort', 'login', 'logout', 'signin', 'signup', 'register',
+  
+  // URL and path components
+  'index', 'default', 'main', 'page', 'site', 'web', 'blog', 'post', 'article',
+  'category', 'tag', 'archive', 'feed', 'rss', 'atom', 'sitemap', 'robots',
+  
+  // Common filler and connector words in web content
+  'read', 'more', 'less', 'full', 'complete', 'entire', 'whole', 'total',
+  'get', 'set', 'add', 'remove', 'update', 'create', 'make', 'build', 'use',
+  'see', 'find', 'look', 'check', 'try', 'test', 'run', 'start', 'stop', 'end',
+  
+  // Time and date related (often appear in timestamps)
+  'am', 'pm', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep',
+  'oct', 'nov', 'dec', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun',
+  'today', 'yesterday', 'tomorrow', 'week', 'month', 'year', 'day', 'time',
+  
+  // Numbers and measurements (common in web content)
+  'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'first', 'second', 'third', 'fourth', 'fifth', 'last', 'next', 'previous',
+  
+  // Social media and sharing terms
+  'share', 'like', 'follow', 'subscribe', 'comment', 'reply', 'retweet', 'post',
+  'tweet', 'status', 'update', 'message', 'chat', 'email', 'contact', 'about',
+  
+  // Generic web content words
+  'content', 'text', 'image', 'photo', 'picture', 'video', 'audio', 'file',
+  'download', 'upload', 'attach', 'embed', 'include', 'insert', 'paste',
+  'copy', 'cut', 'select', 'highlight', 'mark', 'tag', 'label', 'note'
 ])
 
 export async function processWords(posts: Post[], supabase: SupabaseClient) {
