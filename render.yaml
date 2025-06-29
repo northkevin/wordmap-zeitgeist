@@ -1,7 +1,7 @@
 services:
-  # Backend Express API (already deployed)
+  # Backend Express API
   - type: web
-    name: wordmap-zeitgeist
+    name: wordmap-zeitgeist-backend
     env: node
     buildCommand: cd backend && npm install && npm run build
     startCommand: cd backend && npm start
@@ -19,7 +19,7 @@ services:
   # Frontend Static Site
   - type: static
     name: wordmap-zeitgeist-frontend
-    buildCommand: npm ci && npm run build
+    buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: NODE_ENV
@@ -27,7 +27,7 @@ services:
     routes:
       - type: rewrite
         source: /api/*
-        destination: https://wordmap-zeitgeist.onrender.com$1
+        destination: https://wordmap-zeitgeist-backend.onrender.com$1
     headers:
       - path: /*
         name: X-Frame-Options
