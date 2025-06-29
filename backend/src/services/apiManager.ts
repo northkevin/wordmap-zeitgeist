@@ -390,6 +390,61 @@ class RedditApiSource extends ApiSource {
   }
 }
 
+// Twitter API v2 implementation
+class TwitterApiSource extends ApiSource {
+  protected async parseResponse(data: any, endpoint: string, params: Record<string, any>): Promise<any> {
+    // Handle different Twitter API v2 endpoints
+    if (endpoint.includes('tweets/search') || endpoint.includes('tweets/sample')) {
+      return {
+        tweets: data.data?.map((tweet: any) => ({
+          id: tweet.id,
+          text: tweet.text,
+          author_id: tweet.author_id,
+          created_at: tweet.created_at,
+          public_metrics: tweet.public_metrics,
+          context_annotations: tweet.context_annotations,
+          entities: tweet.entities,
+          referenced_tweets: tweet.referenced_tweets
+        })) || [],
+        includes: data.includes,
+        meta: data.meta
+      }
+    }
+
+    if (endpoint.includes('users/by')) {
+      return {
+        users: data.data?.map((user: any) => ({
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          description: user.description,
+          public_metrics: user.public_metrics,
+          verified: user.verified,
+          created_at: user.created_at
+        })) || []
+      }
+    }
+
+    if (endpoint.includes('tweets') && data.data && !Array.isArray(data.data)) {
+      // Single tweet lookup
+      return {
+        tweet: {
+          id: data.data.id,
+          text: data.data.text,
+          author_id: data.data.author_id,
+          created_at: data.data.created_at,
+          public_metrics: data.data.public_metrics,
+          context_annotations: data.data.context_annotations,
+          entities: data.data.entities
+        },
+        includes: data.includes
+      }
+    }
+
+    return data
+  }
+}
+
 export class ApiManager {
   private sources: Map<string, ApiSource> = new Map()
   private static requestLogs: RequestLog[] = []
@@ -408,13 +463,15 @@ export class ApiManager {
         authType: 'query',
         keyParam: 'key',
         rateLimit: {
-          perHour: 10000, // 10k quota units per day, roughly 400 per hour
+          perHour: 400, // 10k quota units per day, roughly 400 per hour (conservative estimate)
           delay: 1000 // 1 second between requests
         }
       }
       
       this.sources.set('youtube', new YouTubeApiSource(youtubeConfig, process.env.YOUTUBE_API_KEY))
       console.log('✅ YouTube API source initialized')
+    } else {
+      console.log('⚠️  YouTube API key not found - skipping initialization')
     }
 
     // NewsAPI.org
@@ -425,13 +482,15 @@ export class ApiManager {
         authType: 'header',
         headerName: 'X-API-Key',
         rateLimit: {
-          perHour: 1000, // 1000 requests per day for free tier
+          perHour: 42, // 1000 requests per day for free tier = ~42 per hour
           delay: 2000 // 2 seconds between requests
         }
       }
       
       this.sources.set('newsapi', new NewsApiSource(newsApiConfig, process.env.NEWSAPI_KEY))
       console.log('✅ NewsAPI source initialized')
+    } else {
+      console.log('⚠️  NewsAPI key not found - skipping initialization')
     }
 
     // Reddit API
@@ -441,7 +500,7 @@ export class ApiManager {
         baseUrl: 'https://oauth.reddit.com/',
         authType: 'oauth',
         rateLimit: {
-          perHour: 600, // 60 requests per minute = 3600 per hour, being conservative
+          perHour: 600, // 60 requests per minute = 3600 per hour, being conservative at 600
           delay: 2000 // 2 seconds between requests
         },
         defaultHeaders: {
@@ -451,6 +510,29 @@ export class ApiManager {
       
       this.sources.set('reddit', new RedditApiSource(redditConfig, ''))
       console.log('✅ Reddit API source initialized')
+    } else {
+      console.log('⚠️  Reddit API credentials not found - skipping initialization')
+    }
+
+    // Twitter API v2
+    if (process.env.TWITTER_BEARER_TOKEN) {
+      const twitterConfig: ApiConfig = {
+        name: 'Twitter',
+        baseUrl: 'https://api.twitter.com/2/',
+        authType: 'bearer',
+        rateLimit: {
+          perHour: 300, // 300 requests per 15-minute window = 1200 per hour, being conservative
+          delay: 1000 // 1 second between requests
+        },
+        defaultHeaders: {
+          'User-Agent': 'WordmapZeitgeist/1.0'
+        }
+      }
+      
+      this.sources.set('twitter', new TwitterApiSource(twitterConfig, process.env.TWITTER_BEARER_TOKEN))
+      console.log('✅ Twitter API source initialized')
+    } else {
+      console.log('⚠️  Twitter Bearer Token not found - skipping initialization')
     }
 
     console.log(`🔧 API Manager initialized with ${this.sources.size} sources`)
