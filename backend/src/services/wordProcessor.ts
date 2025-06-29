@@ -21,6 +21,8 @@ interface Post {
 
 interface PostWithId extends Post {
   id: string;
+  content_extract?: string;
+  extract_method?: string;
 }
 
 export async function processWords(posts: Post[], supabase: SupabaseClient) {
@@ -29,15 +31,29 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
     `[${timestamp}] 🔄 Processing ${posts.length} posts for word extraction...`
   );
 
-  // First, save posts to database
-  const postsToInsert = posts.map((post) => ({
-    source: post.source,
-    title: post.title,
-    content: post.content,
-    url: post.url,
-    scraped_at: new Date().toISOString(),
-    processed: false, // Mark as unprocessed initially
-  }));
+  // Create content extracts limited to tweet length (280 chars)
+  const postsToInsert = posts.map((post) => {
+    // Create extract: title + first 280 chars of content
+    const titleLength = post.title.length;
+    const remainingChars = 280 - titleLength - 1; // -1 for space between title and content
+    const contentExtract =
+      remainingChars > 0 ? post.content.substring(0, remainingChars) : "";
+
+    const fullExtract = `${post.title} ${contentExtract}`.trim();
+    const extractMethod =
+      remainingChars > 0 ? "tweet_length_truncated" : "title_only";
+
+    return {
+      source: post.source,
+      title: post.title,
+      content: post.content,
+      content_extract: fullExtract,
+      extract_method: extractMethod,
+      url: post.url,
+      scraped_at: new Date().toISOString(),
+      processed: false, // Mark as unprocessed initially
+    };
+  });
 
   const { data: insertedPosts, error: postsError } = await supabase
     .from("posts")
@@ -45,7 +61,7 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
       onConflict: "source,title",
       ignoreDuplicates: true,
     })
-    .select("id, source, title, content, url");
+    .select("id, source, title, content, content_extract, extract_method, url");
 
   if (postsError) {
     console.error(`[${timestamp}] ❌ Error saving posts:`, postsError);
@@ -53,7 +69,7 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
   }
 
   console.log(
-    `[${timestamp}] ✅ Saved ${postsToInsert.length} posts to database`
+    `[${timestamp}] ✅ Saved ${postsToInsert.length} posts to database with content extracts`
   );
 
   // Process the inserted posts (which now have IDs)
@@ -69,7 +85,9 @@ export async function reprocessOrphanedPosts(supabase: SupabaseClient) {
     // Query posts where processed = false, limit to 500 per run
     const { data: unprocessedPosts, error: queryError } = await supabase
       .from("posts")
-      .select("id, source, title, content, url")
+      .select(
+        "id, source, title, content, content_extract, extract_method, url"
+      )
       .eq("processed", false)
       .order("scraped_at", { ascending: true }) // Process oldest first
       .limit(500);
@@ -143,7 +161,8 @@ async function processWordsFromPosts(
   const processedPostIds: string[] = [];
 
   for (const post of postsWithIds) {
-    const text = `${post.title} ${post.content}`;
+    // Use content_extract if available, otherwise fall back to title + content
+    const text = post.content_extract || `${post.title} ${post.content}`;
     const originalLength = text.length;
 
     const words = extractWords(text);
