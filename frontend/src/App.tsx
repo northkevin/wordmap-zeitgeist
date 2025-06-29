@@ -57,17 +57,17 @@ function App() {
       <div className="relative z-10">
         <Header onRefresh={() => fetchWords()} lastUpdated={lastUpdated} />
 
-        <main className="container mx-auto px-4 py-8">
+        <main className="container mx-auto px-4 py-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-12"
+            className="text-center mb-4"
           >
-            <h1 className="text-6xl md:text-8xl font-bold mb-6 text-gradient glow-text">
+            <h1 className="text-6xl md:text-8xl font-bold mb-4 text-gradient glow-text">
               Zeitgeist
             </h1>
-            <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
               Capturing the pulse of the internet through real-time analysis of
               global conversations
             </p>
@@ -78,19 +78,19 @@ function App() {
             onTimeRangeChange={handleTimeRangeChange}
           />
 
-          <Stats words={words} loading={loading} />
-
           <SourceAttribution
             words={words}
             loading={loading}
             timeRange={timeRange}
           />
 
+          <Stats words={words} loading={loading} />
+
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.3 }}
-            className="mt-8"
+            className="mt-4"
           >
             <WordMap words={words} loading={loading} />
           </motion.div>
