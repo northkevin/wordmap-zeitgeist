@@ -259,8 +259,8 @@ app.get('/api/manager/logs', (req, res) => {
     const sourceId = req.query.source as string
     const limit = parseInt(req.query.limit as string) || 100
     
-    const logs = apiManager.constructor.getRequestLogs(sourceId, limit)
-    const stats = apiManager.constructor.getRequestStats(sourceId)
+    const logs = (apiManager.constructor as any).getRequestLogs(sourceId, limit)
+    const stats = (apiManager.constructor as any).getRequestStats(sourceId)
     
     res.json({ logs, stats })
   } catch (error) {
