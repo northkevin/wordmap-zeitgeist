@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import WordMap from "./components/WordMap";
 import Header from "./components/Header";
-import Stats from "./components/Stats";
-import SourceAttribution from "./components/SourceAttribution";
+import SourceBar from "./components/SourceBar";
 import ParticleBackground from "./components/ParticleBackground";
 import TimeFilterToggle from "./components/TimeFilterToggle";
 import { WordData } from "./types";
@@ -87,7 +86,7 @@ function App() {
           /> */}
 
           <div className="mb-12">
-            <Stats words={words} loading={loading} />
+            <SourceBar loading={loading} timeRange={timeRange} />
           </div>
 
           <motion.div
