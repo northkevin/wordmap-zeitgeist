@@ -41,6 +41,7 @@ async function validateDatabase() {
     const tables = [
       { name: 'words', description: 'Word frequency data' },
       { name: 'posts', description: 'Scraped posts' },
+      { name: 'word_sources', description: 'Source-specific word counts' },
       { name: 'test_words', description: 'Test words (legacy)' }
     ]
     
@@ -120,6 +121,27 @@ async function validateDatabase() {
     } else {
       console.log('📰 No posts found in database yet')
     }
+
+    // Test source statistics view
+    try {
+      const { data: sourceStats, error: sourceStatsError } = await supabase
+        .from('source_stats')
+        .select('*')
+        .limit(5)
+      
+      if (sourceStatsError) {
+        console.warn('⚠️  Could not fetch source statistics:', sourceStatsError.message)
+      } else if (sourceStats && sourceStats.length > 0) {
+        console.log('📊 Top sources by word count:')
+        sourceStats.forEach((stat, index) => {
+          console.log(`   ${index + 1}. ${stat.source}: ${stat.total_word_count} words (${stat.unique_words} unique)`)
+        })
+      } else {
+        console.log('📊 No source statistics available yet')
+      }
+    } catch (sourceError) {
+      console.warn('⚠️  Source statistics test failed:', sourceError)
+    }
     
     console.log('✅ Database validation complete')
     return true
@@ -183,6 +205,28 @@ app.get('/api/words', async (req, res) => {
     res.json({ words: words || [] })
   } catch (error) {
     console.error('Server error in /api/words:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Get source statistics endpoint
+app.get('/api/sources', async (req, res) => {
+  console.log('Source statistics endpoint requested')
+  try {
+    const { data: sources, error } = await supabase
+      .from('source_stats')
+      .select('*')
+      .order('total_word_count', { ascending: false })
+
+    if (error) {
+      console.error('Database error fetching sources:', error)
+      return res.status(500).json({ error: 'Failed to fetch source statistics' })
+    }
+
+    console.log(`Successfully fetched statistics for ${sources?.length || 0} sources`)
+    res.json({ sources: sources || [] })
+  } catch (error) {
+    console.error('Server error in /api/sources:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -274,6 +318,7 @@ async function startServer() {
     console.log(`📍 Server running on port ${port}`)
     console.log(`🏥 Health check: http://localhost:${port}/health`)
     console.log(`📊 Words API: http://localhost:${port}/api/words`)
+    console.log(`📈 Sources API: http://localhost:${port}/api/sources`)
     console.log(`🔄 Scrape API: http://localhost:${port}/api/scrape`)
     console.log(`⏰ Scheduled scraping: Every 30 minutes`)
     console.log('='.repeat(50))
