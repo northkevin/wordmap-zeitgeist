@@ -1,17 +1,10 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
 # Dependencies
 node_modules/
 */node_modules/
+package-lock.json
+*/package-lock.json
 
-# Build outputs
+# Production builds
 dist/
 */dist/
 build/
@@ -26,15 +19,23 @@ build/
 */.env
 */.env.local
 
-# Editor directories and files
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
 # Runtime data
 pids
@@ -85,7 +86,6 @@ jspm_packages/
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Gatsby files
 .cache/
@@ -99,6 +99,12 @@ public
 tmp/
 temp/
 
-# Supabase
-.branches
-.temp
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
