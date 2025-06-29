@@ -412,30 +412,42 @@ async function processWordsFromPosts(
     `[${timestamp}] 📝 Batch mode: Processing ${uniqueWordList.length} unique words total`
   );
 
-  // Phase 3: Fetch all existing words in ONE query
-  const { data: existingWords, error: fetchError } = await supabase
-    .from("words")
-    .select("id, word, count")
-    .in("word", uniqueWordList);
+  // Phase 3: Fetch all existing words IN CHUNKS to avoid URL too long error
+  const wordList = Array.from(allUniqueWords);
+  const existingWordMap = new Map<string, { id: string; count: number }>();
+  const wordFetchChunkSize = 500; // Safe chunk size
 
-  if (fetchError) {
-    console.error(
-      `[${timestamp}] ❌ Batch mode: Error fetching existing words:`,
-      fetchError
-    );
-    return;
+  console.log(
+    `[${timestamp}] 📊 Batch mode: Fetching existing words in chunks of ${wordFetchChunkSize}...`
+  );
+
+  for (let i = 0; i < wordList.length; i += wordFetchChunkSize) {
+    const chunk = wordList.slice(i, i + wordFetchChunkSize);
+    const { data: existingWords, error: fetchError } = await supabase
+      .from("words")
+      .select("id, word, count")
+      .in("word", chunk);
+
+    if (fetchError) {
+      console.error(
+        `[${timestamp}] ❌ Batch mode: Error fetching existing words chunk ${
+          Math.floor(i / wordFetchChunkSize) + 1
+        }:`,
+        fetchError
+      );
+      continue;
+    }
+
+    existingWords?.forEach((w) => {
+      existingWordMap.set(w.word, { id: w.id, count: w.count });
+    });
   }
 
   // Create maps for quick lookup
-  const existingWordMap = new Map<string, { id: string; count: number }>();
   const newWords: Array<{ word: string; count: number; last_seen: string }> =
     [];
   const wordUpdates: Array<{ id: string; count: number; last_seen: string }> =
     [];
-
-  existingWords?.forEach((word) => {
-    existingWordMap.set(word.word, { id: word.id, count: word.count });
-  });
 
   // Phase 4: Prepare word operations
   for (const word of uniqueWordList) {
