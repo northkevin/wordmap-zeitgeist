@@ -62,7 +62,7 @@ function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-8"
+            className="text-center mb-12"
           >
             <h1 className="text-7xl md:text-9xl font-bold mb-4 text-gradient glow-text leading-tight">
               Zeitgeist
@@ -73,24 +73,28 @@ function App() {
             </p>
           </motion.div>
 
-          <TimeFilterToggle
-            timeRange={timeRange}
-            onTimeRangeChange={handleTimeRangeChange}
-          />
+          <div className="mb-8">
+            <TimeFilterToggle
+              timeRange={timeRange}
+              onTimeRangeChange={handleTimeRangeChange}
+            />
+          </div>
 
-          <SourceAttribution
+          {/* <SourceAttribution
             words={words}
             loading={loading}
             timeRange={timeRange}
-          />
+          /> */}
 
-          <Stats words={words} loading={loading} />
+          <div className="mb-12">
+            <Stats words={words} loading={loading} />
+          </div>
 
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.3 }}
-            className="mt-4"
+            className="mt-12"
           >
             <WordMap words={words} loading={loading} />
           </motion.div>
