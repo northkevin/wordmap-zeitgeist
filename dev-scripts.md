@@ -1,62 +1,73 @@
 # Development Scripts
 
-This is a frontend-only project. Here are the available development commands:
+Since we removed the root package.json to fix deployment issues, here are the common development commands:
 
 ## Starting Development
 
+**Option 1: Manual (recommended for debugging)**
 ```bash
-# Frontend development server
+# Terminal 1 - Backend
+cd backend && npm run dev
+
+# Terminal 2 - Frontend  
 cd frontend && npm run dev
 ```
 
-Or from the root directory:
+**Option 2: Using concurrently (if you want to reinstall root package.json locally)**
 ```bash
-npm --prefix frontend run dev
+# Only do this locally, don't commit the root package.json
+npm init -y
+npm install concurrently --save-dev
+
+# Add this script to the root package.json:
+# "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\""
+
+npm run dev
 ```
 
 ## Building
 
 ```bash
-# Build frontend for production
+# Build frontend
 cd frontend && npm run build
-```
 
-Or from the root directory:
-```bash
-npm --prefix frontend run build
+# Build backend
+cd backend && npm run build
 ```
 
 ## Cleaning
 
 ```bash
-# Clean frontend build artifacts
+# Clean frontend
 cd frontend && npm run clean
+
+# Clean backend
+cd backend && npm run clean
 ```
 
 ## Fresh Install & Build
 
 ```bash
-# Frontend fresh install and build
+# Frontend
 cd frontend && npm run fresh:build
+
+# Backend
+cd backend && npm run fresh:build
 ```
 
 ## Linting
 
 ```bash
-# Frontend linting
+# Frontend
 cd frontend && npm run lint
-```
 
-## Preview Production Build
-
-```bash
-# Preview the production build locally
-cd frontend && npm run preview
+# Backend
+cd backend && npm run lint
 ```
 
 ## Notes
 
-- This is a frontend-only project using React + Vite + TypeScript
-- The backend functionality is handled by Supabase (database) and edge functions
-- All commands should be run from the frontend directory or using the --prefix flag from root
-- The project uses Supabase for data storage and API functionality
+- The root package.json was removed to fix Render.com deployment issues
+- Render was picking up the root workspace configuration and causing TypeScript resolution problems
+- For local development, you can temporarily add a root package.json with concurrently if desired
+- Just make sure not to commit it to avoid deployment issues
