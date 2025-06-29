@@ -7,6 +7,10 @@ interface Post {
   url: string
 }
 
+interface PostWithId extends Post {
+  id: string
+}
+
 const STOP_WORDS = new Set([
   // Common English stop words
   'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
@@ -114,7 +118,8 @@ const SOURCE_SPECIFIC_STOPWORDS: Record<string, Set<string>> = {
 }
 
 export async function processWords(posts: Post[], supabase: SupabaseClient) {
-  console.log(`🔄 Processing ${posts.length} posts for word extraction...`)
+  const timestamp = new Date().toISOString()
+  console.log(`[${timestamp}] 🔄 Processing ${posts.length} posts for word extraction...`)
   
   // First, save posts to database
   const postsToInsert = posts.map(post => ({
@@ -122,24 +127,85 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
     title: post.title,
     content: post.content,
     url: post.url,
-    scraped_at: new Date().toISOString()
+    scraped_at: new Date().toISOString(),
+    processed: false // Mark as unprocessed initially
   }))
 
-  const { error: postsError } = await supabase
+  const { data: insertedPosts, error: postsError } = await supabase
     .from('posts')
     .insert(postsToInsert)
+    .select('id, source, title, content, url')
 
   if (postsError) {
-    console.error('❌ Error saving posts:', postsError)
-  } else {
-    console.log(`✅ Saved ${postsToInsert.length} posts to database`)
+    console.error(`[${timestamp}] ❌ Error saving posts:`, postsError)
+    return
   }
 
+  console.log(`[${timestamp}] ✅ Saved ${postsToInsert.length} posts to database`)
+
+  // Process the inserted posts (which now have IDs)
+  const postsWithIds: PostWithId[] = insertedPosts || []
+  await processWordsFromPosts(postsWithIds, supabase)
+}
+
+export async function reprocessOrphanedPosts(supabase: SupabaseClient) {
+  const timestamp = new Date().toISOString()
+  console.log(`[${timestamp}] 🔄 Starting reprocessing of orphaned posts...`)
+
+  try {
+    // Query posts where processed = false, limit to 500 per run
+    const { data: unprocessedPosts, error: queryError } = await supabase
+      .from('posts')
+      .select('id, source, title, content, url')
+      .eq('processed', false)
+      .order('scraped_at', { ascending: true }) // Process oldest first
+      .limit(500)
+
+    if (queryError) {
+      console.error(`[${timestamp}] ❌ Error querying unprocessed posts:`, queryError)
+      return { success: false, error: queryError.message }
+    }
+
+    if (!unprocessedPosts || unprocessedPosts.length === 0) {
+      console.log(`[${timestamp}] ✅ No orphaned posts found - all posts are processed`)
+      return { success: true, postsProcessed: 0, uniqueWords: 0 }
+    }
+
+    // Get unique sources for logging
+    const uniqueSources = [...new Set(unprocessedPosts.map(post => post.source))].join(', ')
+    console.log(`[${timestamp}] 📊 Found ${unprocessedPosts.length} unprocessed posts from sources: ${uniqueSources}`)
+
+    // Process the orphaned posts
+    const wordCountsBefore = await getTotalWordCount(supabase)
+    await processWordsFromPosts(unprocessedPosts, supabase)
+    const wordCountsAfter = await getTotalWordCount(supabase)
+    
+    const uniqueWordsAdded = wordCountsAfter - wordCountsBefore
+
+    console.log(`[${timestamp}] ✅ Reprocessed ${unprocessedPosts.length} posts, extracted ${uniqueWordsAdded} unique words`)
+
+    return {
+      success: true,
+      postsProcessed: unprocessedPosts.length,
+      uniqueWords: uniqueWordsAdded,
+      sources: uniqueSources
+    }
+
+  } catch (error) {
+    console.error(`[${timestamp}] ❌ Error in reprocessOrphanedPosts:`, error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+async function processWordsFromPosts(postsWithIds: PostWithId[], supabase: SupabaseClient) {
+  const timestamp = new Date().toISOString()
+  
   // Extract and count words by source
   const wordCountsBySource = new Map<string, Map<string, number>>()
   const debugInfo = new Map<string, { totalPosts: number, totalChars: number, extractedWords: number, validWords: number }>()
+  const processedPostIds: string[] = []
   
-  for (const post of posts) {
+  for (const post of postsWithIds) {
     const text = `${post.title} ${post.content}`
     const originalLength = text.length
     
@@ -188,10 +254,13 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
     for (const word of validWords) {
       sourceWordCounts.set(word, (sourceWordCounts.get(word) || 0) + 1)
     }
+
+    // Track this post as processed (we'll mark it in DB after successful word processing)
+    processedPostIds.push(post.id)
   }
 
   // Log debug summary for all sources
-  console.log('\n📊 WORD PROCESSING DEBUG SUMMARY:')
+  console.log(`\n[${timestamp}] 📊 WORD PROCESSING DEBUG SUMMARY:`)
   console.log('='.repeat(80))
   for (const [source, debug] of debugInfo) {
     const avgCharsPerPost = debug.totalChars / debug.totalPosts
@@ -210,7 +279,7 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
   }
   console.log('='.repeat(80))
 
-  console.log(`📊 Processing words from ${wordCountsBySource.size} sources...`)
+  console.log(`[${timestamp}] 📊 Processing words from ${wordCountsBySource.size} sources...`)
 
   // Process each source's words
   let totalWordsProcessed = 0
@@ -218,11 +287,11 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
 
   for (const [source, wordCounts] of wordCountsBySource) {
     if (wordCounts.size === 0) {
-      console.log(`⚠️  Skipping ${source} - no valid words found`)
+      console.log(`[${timestamp}] ⚠️  Skipping ${source} - no valid words found`)
       continue
     }
     
-    console.log(`📝 Processing ${wordCounts.size} unique words from ${source}...`)
+    console.log(`[${timestamp}] 📝 Processing ${wordCounts.size} unique words from ${source}...`)
     
     for (const [word, count] of wordCounts) {
       try {
@@ -259,7 +328,7 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
             .single()
 
           if (insertError || !newWord) {
-            console.error(`❌ Error inserting word "${word}":`, insertError)
+            console.error(`[${timestamp}] ❌ Error inserting word "${word}":`, insertError)
             continue
           }
           
@@ -300,17 +369,44 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
         totalWordsProcessed += count
         
       } catch (error) {
-        console.error(`❌ Error processing word "${word}" from ${source}:`, error)
+        console.error(`[${timestamp}] ❌ Error processing word "${word}" from ${source}:`, error)
       }
     }
     
-    console.log(`✅ Completed processing ${wordCounts.size} words from ${source}`)
+    console.log(`[${timestamp}] ✅ Completed processing ${wordCounts.size} words from ${source}`)
   }
 
-  console.log(`🎉 Word processing complete:`)
+  // Mark posts as processed after successful word processing
+  if (processedPostIds.length > 0) {
+    const { error: updateError } = await supabase
+      .from('posts')
+      .update({ processed: true })
+      .in('id', processedPostIds)
+
+    if (updateError) {
+      console.error(`[${timestamp}] ❌ Error marking posts as processed:`, updateError)
+    } else {
+      console.log(`[${timestamp}] ✅ Marked ${processedPostIds.length} posts as processed`)
+    }
+  }
+
+  console.log(`[${timestamp}] 🎉 Word processing complete:`)
   console.log(`   📈 Total word mentions processed: ${totalWordsProcessed.toLocaleString()}`)
   console.log(`   🆕 New unique words added: ${totalUniqueWords}`)
   console.log(`   📊 Sources processed: ${wordCountsBySource.size}`)
+}
+
+async function getTotalWordCount(supabase: SupabaseClient): Promise<number> {
+  const { count, error } = await supabase
+    .from('words')
+    .select('*', { count: 'exact', head: true })
+
+  if (error) {
+    console.error('Error getting word count:', error)
+    return 0
+  }
+
+  return count || 0
 }
 
 function extractWords(text: string): string[] {

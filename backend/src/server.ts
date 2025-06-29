@@ -5,7 +5,7 @@ import dotenv from 'dotenv'
 import cron from 'node-cron'
 import { createClient } from '@supabase/supabase-js'
 import { scrapeRSSFeeds } from './services/scraper.js'
-import { processWords } from './services/wordProcessor.js'
+import { processWords, reprocessOrphanedPosts } from './services/wordProcessor.js'
 import { apiManager } from './services/apiManager.js'
 
 // Load environment variables
@@ -60,6 +60,28 @@ async function validateDatabase() {
       } catch (tableError) {
         console.warn(`⚠️  Could not validate table '${table.name}':`, tableError)
       }
+    }
+    
+    // Check for processed column in posts table
+    try {
+      const { data: processedCheck, error: processedError } = await supabase
+        .from('posts')
+        .select('processed')
+        .limit(1)
+      
+      if (processedError) {
+        console.warn('⚠️  Posts table missing "processed" column - run migration to add it')
+      } else {
+        // Count unprocessed posts
+        const { count: unprocessedCount } = await supabase
+          .from('posts')
+          .select('*', { count: 'exact', head: true })
+          .eq('processed', false)
+        
+        console.log(`📋 Unprocessed posts: ${unprocessedCount || 0}`)
+      }
+    } catch (processedCheckError) {
+      console.warn('⚠️  Could not check processed column:', processedCheckError)
     }
     
     // Test RLS policies by trying to read as public user
@@ -301,23 +323,24 @@ app.post('/api/manager/scrape', async (req, res) => {
 
 // Scrape endpoint (protected)
 app.post('/api/scrape', async (req, res) => {
-  console.log('Scrape endpoint requested')
+  const timestamp = new Date().toISOString()
+  console.log(`[${timestamp}] Scrape endpoint requested`)
   try {
     const { secret } = req.body
     
     if (secret !== process.env.SCRAPE_SECRET) {
-      console.warn('Unauthorized scrape attempt')
+      console.warn(`[${timestamp}] Unauthorized scrape attempt`)
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    console.log('Starting RSS scraping...')
+    console.log(`[${timestamp}] Starting RSS scraping...`)
     const posts = await scrapeRSSFeeds()
-    console.log(`Scraped ${posts.length} posts`)
+    console.log(`[${timestamp}] Scraped ${posts.length} posts`)
 
     if (posts.length > 0) {
-      console.log('Processing words...')
+      console.log(`[${timestamp}] Processing words...`)
       await processWords(posts, supabase)
-      console.log('Word processing complete')
+      console.log(`[${timestamp}] Word processing complete`)
     }
 
     res.json({ 
@@ -326,8 +349,50 @@ app.post('/api/scrape', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('Scraping error:', error)
+    console.error(`[${timestamp}] Scraping error:`, error)
     res.status(500).json({ error: 'Scraping failed' })
+  }
+})
+
+// Reprocess orphaned posts endpoint (protected)
+app.post('/api/reprocess', async (req, res) => {
+  const timestamp = new Date().toISOString()
+  console.log(`[${timestamp}] Reprocess endpoint requested`)
+  try {
+    const { secret } = req.body
+    
+    if (secret !== process.env.SCRAPE_SECRET) {
+      console.warn(`[${timestamp}] Unauthorized reprocess attempt`)
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    console.log(`[${timestamp}] Starting reprocessing of orphaned posts...`)
+    const result = await reprocessOrphanedPosts(supabase)
+    
+    if (result.success) {
+      console.log(`[${timestamp}] Reprocessing complete: ${result.postsProcessed} posts, ${result.uniqueWords} unique words`)
+      res.json({
+        success: true,
+        postsProcessed: result.postsProcessed,
+        uniqueWords: result.uniqueWords,
+        sources: result.sources,
+        timestamp: new Date().toISOString()
+      })
+    } else {
+      console.error(`[${timestamp}] Reprocessing failed:`, result.error)
+      res.status(500).json({ 
+        success: false, 
+        error: result.error,
+        timestamp: new Date().toISOString()
+      })
+    }
+  } catch (error) {
+    console.error(`[${timestamp}] Reprocessing error:`, error)
+    res.status(500).json({ 
+      success: false, 
+      error: 'Reprocessing failed',
+      timestamp: new Date().toISOString()
+    })
   }
 })
 
@@ -346,15 +411,35 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Schedule RSS scraping every 30 minutes
 cron.schedule('*/30 * * * *', async () => {
   try {
-    console.log('Scheduled scraping started...')
+    const timestamp = new Date().toISOString()
+    console.log(`[${timestamp}] Scheduled scraping started...`)
     const posts = await scrapeRSSFeeds()
     
     if (posts.length > 0) {
       await processWords(posts, supabase)
-      console.log(`Scheduled scraping complete: ${posts.length} posts processed`)
+      console.log(`[${timestamp}] Scheduled scraping complete: ${posts.length} posts processed`)
     }
   } catch (error) {
     console.error('Scheduled scraping error:', error)
+  }
+})
+
+// Schedule orphaned post reprocessing every 2 hours
+cron.schedule('0 */2 * * *', async () => {
+  try {
+    const timestamp = new Date().toISOString()
+    console.log(`[${timestamp}] Scheduled orphaned post reprocessing started...`)
+    const result = await reprocessOrphanedPosts(supabase)
+    
+    if (result.success && result.postsProcessed > 0) {
+      console.log(`[${timestamp}] Scheduled reprocessing complete: ${result.postsProcessed} posts, ${result.uniqueWords} unique words`)
+    } else if (result.success) {
+      console.log(`[${timestamp}] Scheduled reprocessing complete: No orphaned posts found`)
+    } else {
+      console.error(`[${timestamp}] Scheduled reprocessing failed:`, result.error)
+    }
+  } catch (error) {
+    console.error('Scheduled reprocessing error:', error)
   }
 })
 
@@ -396,8 +481,10 @@ async function startServer() {
     console.log(`📊 Words API: http://localhost:${port}/api/words`)
     console.log(`📈 Sources API: http://localhost:${port}/api/sources`)
     console.log(`🔄 Scrape API: http://localhost:${port}/api/scrape`)
+    console.log(`🔄 Reprocess API: http://localhost:${port}/api/reprocess`)
     console.log(`🤖 API Manager: http://localhost:${port}/api/manager/*`)
     console.log(`⏰ Scheduled scraping: Every 30 minutes`)
+    console.log(`⏰ Scheduled reprocessing: Every 2 hours`)
     console.log('='.repeat(50))
     
     if (dbValid) {
