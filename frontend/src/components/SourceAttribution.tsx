@@ -88,6 +88,12 @@ const SourceIcon: React.FC<{ source: Omit<Source, 'wordCount'> }> = ({ source })
   )
 }
 
+const formatWordCount = (count: number): string => {
+  if (count >= 10000) return `${Math.floor(count / 1000)}k`
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}k`
+  return count.toString()
+}
+
 const SourceAttribution: React.FC<SourceAttributionProps> = ({ words, loading }) => {
   const { visibleSources, hiddenCount } = useMemo(() => {
     if (loading || !words.length) {
@@ -161,23 +167,23 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({ words, loading })
             className="group flex flex-col items-center space-y-2 p-3 rounded-lg hover:bg-gray-800/30 transition-all duration-300 relative"
             title={`Visit ${source.name}${source.wordCount > 0 ? ` • ${source.wordCount.toLocaleString()} words` : ''}`}
           >
-            <div className="relative">
+            <div className="relative flex flex-col items-center">
               <SourceIcon source={source} />
               
-              {/* Word count indicator */}
+              {/* Subtle word count below icon */}
               {source.wordCount > 0 && !loading && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.8 + (index * 0.1) }}
-                  className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"
+                  className="mt-1 text-xs text-gray-500 font-medium min-w-0 max-w-[3rem] truncate"
                 >
-                  {source.wordCount > 999 ? '1k+' : source.wordCount > 99 ? '99+' : source.wordCount}
+                  {formatWordCount(source.wordCount)}
                 </motion.div>
               )}
             </div>
             
-            <span className="text-xs text-gray-500 group-hover:text-gray-300 transition-colors duration-300 font-medium text-center leading-tight">
+            <span className="text-xs text-gray-500 group-hover:text-gray-300 transition-colors duration-300 font-medium text-center leading-tight max-w-[4rem] truncate">
               {source.name}
             </span>
             
@@ -218,21 +224,6 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({ words, loading })
           </motion.div>
         )}
       </div>
-      
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.8, delay: 1.0 }}
-        className="mt-6 text-xs text-gray-500"
-      >
-        {loading ? (
-          'Loading source data...'
-        ) : words.length > 0 ? (
-          'Sources ordered by word contribution • Hover for details'
-        ) : (
-          'Real-time data aggregation from trusted news sources'
-        )}
-      </motion.div>
     </motion.div>
   )
 }
