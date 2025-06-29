@@ -1,50 +1,62 @@
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import WordMap from './components/WordMap'
-import Header from './components/Header'
-import Stats from './components/Stats'
-import SourceAttribution from './components/SourceAttribution'
-import ParticleBackground from './components/ParticleBackground'
-import { WordData } from './types'
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import WordMap from "./components/WordMap";
+import Header from "./components/Header";
+import Stats from "./components/Stats";
+import SourceAttribution from "./components/SourceAttribution";
+import ParticleBackground from "./components/ParticleBackground";
+import TimeFilterToggle from "./components/TimeFilterToggle";
+import { WordData } from "./types";
 
 function App() {
-  const [words, setWords] = useState<WordData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [words, setWords] = useState<WordData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [timeRange, setTimeRange] = useState<"24h" | "all">("24h");
 
-  const fetchWords = async () => {
+  const fetchWords = async (range: "24h" | "all" = timeRange) => {
     try {
+      setLoading(true);
       // Use relative URL for API calls - will be proxied to backend in production
-      const response = await fetch('/api/words')
+      const response = await fetch(`/api/words?timeRange=${range}`);
       if (response.ok) {
-        const data = await response.json()
-        setWords(data.words || [])
-        setLastUpdated(new Date())
+        const data = await response.json();
+        setWords(data.words || []);
+        setLastUpdated(new Date());
       } else {
-        console.error('Failed to fetch words:', response.status, response.statusText)
+        console.error(
+          "Failed to fetch words:",
+          response.status,
+          response.statusText
+        );
       }
     } catch (error) {
-      console.error('Failed to fetch words:', error)
+      console.error("Failed to fetch words:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  const handleTimeRangeChange = (range: "24h" | "all") => {
+    setTimeRange(range);
+    fetchWords(range);
+  };
 
   useEffect(() => {
-    fetchWords()
-    
+    fetchWords();
+
     // Refresh data every 5 minutes
-    const interval = setInterval(fetchWords, 5 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [])
+    const interval = setInterval(() => fetchWords(), 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white relative overflow-hidden">
       <ParticleBackground />
-      
+
       <div className="relative z-10">
-        <Header onRefresh={fetchWords} lastUpdated={lastUpdated} />
-        
+        <Header onRefresh={() => fetchWords()} lastUpdated={lastUpdated} />
+
         <main className="container mx-auto px-4 py-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -56,14 +68,20 @@ function App() {
               Zeitgeist
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-              Capturing the pulse of the internet through real-time analysis of global conversations
+              Capturing the pulse of the internet through real-time analysis of
+              global conversations
             </p>
           </motion.div>
 
+          <TimeFilterToggle
+            timeRange={timeRange}
+            onTimeRangeChange={handleTimeRangeChange}
+          />
+
           <Stats words={words} loading={loading} />
-          
+
           <SourceAttribution words={words} loading={loading} />
-          
+
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -75,7 +93,7 @@ function App() {
         </main>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
