@@ -106,7 +106,7 @@ const WordMap: React.FC<WordMapProps> = ({ words, loading }) => {
         className="text-center mt-8 text-gray-400"
       >
         <p>Hover over words to see their frequency • Size indicates popularity</p>
-      </div>
+      </motion.div>
     </div>
   )
 }
