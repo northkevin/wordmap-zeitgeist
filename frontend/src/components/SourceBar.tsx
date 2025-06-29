@@ -46,7 +46,7 @@ const sourceIconMap: Record<string, React.ReactNode> = {
 
 const fallbackLogoMap: Record<string, string> = {
   // For sources not in react-icons
-  "Hacker News": "/logos/hn.svg",
+  "Hacker News": "/hn.svg",
   "BBC News": "/logos/bbc.svg",
   Wired: "/logos/wired.svg",
   "NPR Main News": "/logos/npr.svg",
