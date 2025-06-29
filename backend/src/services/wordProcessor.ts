@@ -137,10 +137,46 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
 
   // Extract and count words by source
   const wordCountsBySource = new Map<string, Map<string, number>>()
+  const debugInfo = new Map<string, { totalPosts: number, totalChars: number, extractedWords: number, validWords: number }>()
   
   for (const post of posts) {
-    const text = `${post.title} ${post.content}`.toLowerCase()
+    const text = `${post.title} ${post.content}`
+    const originalLength = text.length
+    
+    // Debug: Log sample content for problematic sources
+    const problematicSources = ['NPR Main News', 'Reddit r/all', 'Reddit r/popular', 'Reddit r/worldnews', 'Reddit Tech Combined', 'The Guardian US', 'The Guardian World']
+    if (problematicSources.includes(post.source)) {
+      console.log(`\n🔍 DEBUG [${post.source}]:`)
+      console.log(`   Title: "${post.title.substring(0, 100)}${post.title.length > 100 ? '...' : ''}"`)
+      console.log(`   Content length: ${post.content.length}`)
+      console.log(`   Content sample: "${post.content.substring(0, 200)}${post.content.length > 200 ? '...' : ''}"`)
+      console.log(`   Combined text length: ${originalLength}`)
+    }
+    
     const words = extractWords(text)
+    const validWords = words.filter(word => isValidWord(word, post.source))
+    
+    // Update debug info
+    if (!debugInfo.has(post.source)) {
+      debugInfo.set(post.source, { totalPosts: 0, totalChars: 0, extractedWords: 0, validWords: 0 })
+    }
+    const debug = debugInfo.get(post.source)!
+    debug.totalPosts++
+    debug.totalChars += originalLength
+    debug.extractedWords += words.length
+    debug.validWords += validWords.length
+    
+    // Debug: Log word extraction for problematic sources
+    if (problematicSources.includes(post.source)) {
+      console.log(`   Raw words extracted: ${words.length}`)
+      console.log(`   Valid words after filtering: ${validWords.length}`)
+      if (words.length > 0) {
+        console.log(`   Sample raw words: [${words.slice(0, 10).join(', ')}]`)
+      }
+      if (validWords.length > 0) {
+        console.log(`   Sample valid words: [${validWords.slice(0, 10).join(', ')}]`)
+      }
+    }
     
     // Initialize source map if it doesn't exist
     if (!wordCountsBySource.has(post.source)) {
@@ -149,12 +185,30 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
     
     const sourceWordCounts = wordCountsBySource.get(post.source)!
     
-    for (const word of words) {
-      if (isValidWord(word, post.source)) {
-        sourceWordCounts.set(word, (sourceWordCounts.get(word) || 0) + 1)
-      }
+    for (const word of validWords) {
+      sourceWordCounts.set(word, (sourceWordCounts.get(word) || 0) + 1)
     }
   }
+
+  // Log debug summary for all sources
+  console.log('\n📊 WORD PROCESSING DEBUG SUMMARY:')
+  console.log('='.repeat(80))
+  for (const [source, debug] of debugInfo) {
+    const avgCharsPerPost = debug.totalChars / debug.totalPosts
+    const avgWordsPerPost = debug.extractedWords / debug.totalPosts
+    const avgValidWordsPerPost = debug.validWords / debug.totalPosts
+    const validWordRatio = debug.extractedWords > 0 ? (debug.validWords / debug.extractedWords * 100) : 0
+    
+    console.log(`📰 ${source}:`)
+    console.log(`   Posts: ${debug.totalPosts} | Chars: ${debug.totalChars.toLocaleString()} (avg: ${Math.round(avgCharsPerPost)})`)
+    console.log(`   Words: ${debug.extractedWords.toLocaleString()} (avg: ${Math.round(avgWordsPerPost)}) | Valid: ${debug.validWords.toLocaleString()} (avg: ${Math.round(avgValidWordsPerPost)})`)
+    console.log(`   Valid ratio: ${validWordRatio.toFixed(1)}%`)
+    
+    if (debug.validWords === 0 && debug.totalPosts > 0) {
+      console.log(`   ⚠️  WARNING: No valid words extracted from ${debug.totalPosts} posts!`)
+    }
+  }
+  console.log('='.repeat(80))
 
   console.log(`📊 Processing words from ${wordCountsBySource.size} sources...`)
 
@@ -163,6 +217,11 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
   let totalUniqueWords = 0
 
   for (const [source, wordCounts] of wordCountsBySource) {
+    if (wordCounts.size === 0) {
+      console.log(`⚠️  Skipping ${source} - no valid words found`)
+      continue
+    }
+    
     console.log(`📝 Processing ${wordCounts.size} unique words from ${source}...`)
     
     for (const [word, count] of wordCounts) {
@@ -255,6 +314,9 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
 }
 
 function extractWords(text: string): string[] {
+  // Store original for debugging
+  const originalText = text
+  
   // Remove URLs first (more comprehensive pattern)
   text = text.replace(/https?:\/\/[^\s]+/g, ' ')
   text = text.replace(/www\.[^\s]+/g, ' ')
@@ -269,8 +331,9 @@ function extractWords(text: string): string[] {
   // Remove email addresses
   text = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, ' ')
   
-  // Remove common web artifacts
-  text = text.replace(/\b(continue\s+reading|read\s+more|click\s+here|learn\s+more)\b/gi, ' ')
+  // Remove common web artifacts and UI text
+  text = text.replace(/\b(continue\s+reading|read\s+more|click\s+here|learn\s+more|view\s+full|full\s+article)\b/gi, ' ')
+  text = text.replace(/\b(submitted\s+by|posted\s+by|comments?|upvotes?|downvotes?)\b/gi, ' ')
   
   // Remove social media handles and hashtags
   text = text.replace(/@[a-zA-Z0-9_]+/g, ' ')
@@ -279,19 +342,36 @@ function extractWords(text: string): string[] {
   // Remove file extensions and paths
   text = text.replace(/\b[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|tar|gz)\b/gi, ' ')
   
+  // Remove Reddit-specific artifacts
+  text = text.replace(/\b(r\/[a-zA-Z0-9_]+|u\/[a-zA-Z0-9_]+)\b/g, ' ')
+  text = text.replace(/\b\d+\s+(points?|karma|upvotes?)\b/gi, ' ')
+  
+  // Remove timestamps and dates
+  text = text.replace(/\b\d{1,2}:\d{2}(\s*(am|pm))?\b/gi, ' ')
+  text = text.replace(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g, ' ')
+  text = text.replace(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{2,4}\b/gi, ' ')
+  
+  // Remove common Reddit/forum artifacts
+  text = text.replace(/\b(edit|update|tldr|tl;dr|imo|imho|fyi|btw|afaik|iirc)\b/gi, ' ')
+  
+  // Remove numbers with units
+  text = text.replace(/\b\d+\s*(k|m|b|kb|mb|gb|tb|%|percent)\b/gi, ' ')
+  
   // Then extract words
-  return text
+  const words = text
     .toLowerCase()
     .replace(/[^\w\s]/g, ' ') // Replace punctuation with spaces
     .split(/\s+/) // Split on whitespace
     .filter(word => word.length > 0) // Remove empty strings
+  
+  return words
 }
 
 function isValidWord(word: string, source: string): boolean {
-  // Check basic validity first
+  // Check basic validity first - relaxed minimum length to 2 for abbreviations
   if (
-    word.length < 3 || // At least 3 characters
-    word.length > 20 || // Not too long
+    word.length < 2 || // At least 2 characters (changed from 3)
+    word.length > 25 || // Not too long (increased from 20)
     STOP_WORDS.has(word) || // Not a global stop word
     /^\d+$/.test(word) || // Not just numbers
     !/^[a-zA-Z]/.test(word) // Starts with a letter
@@ -299,10 +379,21 @@ function isValidWord(word: string, source: string): boolean {
     return false
   }
   
+  // Allow common tech abbreviations and acronyms
+  const techAbbreviations = new Set(['ai', 'ml', 'ar', 'vr', 'ux', 'ui', 'api', 'sdk', 'cpu', 'gpu', 'ram', 'ssd', 'hdd', 'usb', 'wifi', 'iot', 'saas', 'paas', 'iaas', 'ceo', 'cto', 'cfo'])
+  if (word.length === 2 && !techAbbreviations.has(word)) {
+    return false
+  }
+  
+  // Filter out common web artifacts that might slip through
+  const webArtifacts = new Set(['amp', 'cdn', 'css', 'dom', 'gif', 'jpg', 'png', 'svg', 'pdf', 'xml', 'rss', 'url', 'uri', 'utm', 'seo', 'cms'])
+  if (webArtifacts.has(word)) {
+    return false
+  }
+  
   // Check source-specific stopwords
   const sourceStopwords = SOURCE_SPECIFIC_STOPWORDS[source]
   if (sourceStopwords && sourceStopwords.has(word)) {
-    console.log(`🚫 Filtered source-specific word "${word}" from ${source}`)
     return false
   }
   
