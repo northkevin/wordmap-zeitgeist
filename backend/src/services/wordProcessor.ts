@@ -82,6 +82,26 @@ const STOP_WORDS = new Set([
   'copy', 'cut', 'select', 'highlight', 'mark', 'tag', 'label', 'note'
 ])
 
+// Source-specific stopwords - words to filter out only when processing content from that specific source
+const SOURCE_SPECIFIC_STOPWORDS: Record<string, Set<string>> = {
+  'TechCrunch': new Set(['techcrunch', 'crunchbase', 'disrupt']),
+  'Hacker News': new Set(['hackernews', 'ycombinator', 'combinator']),
+  'BBC News': new Set(['bbc', 'british', 'broadcasting', 'corporation']),
+  'Wired': new Set(['wired', 'conde', 'nast']),
+  'CNN': new Set(['cnn', 'cable', 'news', 'network']),
+  'CNN Top Stories': new Set(['cnn', 'cable', 'news', 'network']),
+  'CNN World': new Set(['cnn', 'cable', 'news', 'network']),
+  "O'Reilly Radar": new Set(['oreilly', 'radar', 'media']),
+  'The Guardian UK': new Set(['guardian', 'theguardian']),
+  'The Guardian World': new Set(['guardian', 'theguardian']),
+  'The Guardian US': new Set(['guardian', 'theguardian']),
+  'NPR Main News': new Set(['npr', 'national', 'public', 'radio']),
+  'Reddit r/all': new Set(['reddit', 'subreddit']),
+  'Reddit r/popular': new Set(['reddit', 'subreddit']),
+  'Reddit r/worldnews': new Set(['reddit', 'subreddit', 'worldnews']),
+  'Reddit Tech Combined': new Set(['reddit', 'subreddit', 'technology', 'science', 'programming'])
+}
+
 export async function processWords(posts: Post[], supabase: SupabaseClient) {
   console.log(`🔄 Processing ${posts.length} posts for word extraction...`)
   
@@ -119,7 +139,7 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
     const sourceWordCounts = wordCountsBySource.get(post.source)!
     
     for (const word of words) {
-      if (isValidWord(word)) {
+      if (isValidWord(word, post.source)) {
         sourceWordCounts.set(word, (sourceWordCounts.get(word) || 0) + 1)
       }
     }
@@ -230,12 +250,24 @@ function extractWords(text: string): string[] {
     .filter(word => word.length > 0) // Remove empty strings
 }
 
-function isValidWord(word: string): boolean {
-  return (
-    word.length >= 3 && // At least 3 characters
-    word.length <= 20 && // Not too long
-    !STOP_WORDS.has(word) && // Not a stop word
-    !/^\d+$/.test(word) && // Not just numbers
-    /^[a-zA-Z]/.test(word) // Starts with a letter
-  )
+function isValidWord(word: string, source: string): boolean {
+  // Check basic validity first
+  if (
+    word.length < 3 || // At least 3 characters
+    word.length > 20 || // Not too long
+    STOP_WORDS.has(word) || // Not a global stop word
+    /^\d+$/.test(word) || // Not just numbers
+    !/^[a-zA-Z]/.test(word) // Starts with a letter
+  ) {
+    return false
+  }
+
+  // Check source-specific stopwords
+  const sourceStopwords = SOURCE_SPECIFIC_STOPWORDS[source]
+  if (sourceStopwords && sourceStopwords.has(word)) {
+    console.log(`🚫 Filtered source-specific word "${word}" from ${source}`)
+    return false
+  }
+
+  return true
 }
