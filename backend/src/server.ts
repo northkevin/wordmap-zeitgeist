@@ -266,6 +266,7 @@ app.get("/api/words", async (req, res) => {
           word_id,
           count,
           last_seen,
+          source,
           words!inner(word, id)
         `
         )
@@ -277,20 +278,22 @@ app.get("/api/words", async (req, res) => {
       if (queryError) {
         error = queryError;
       } else {
-        // Group by word and sum counts
+        // Group by word and sum counts, and collect per-source counts
         const wordMap = new Map();
         data?.forEach((ws: any) => {
           const word = ws.words;
-          if (wordMap.has(word.id)) {
-            wordMap.get(word.id).count += ws.count;
-          } else {
+          if (!wordMap.has(word.id)) {
             wordMap.set(word.id, {
               id: word.id,
               word: word.word,
-              count: ws.count,
+              count: 0,
               last_seen: ws.last_seen,
+              sources: [],
             });
           }
+          const entry = wordMap.get(word.id);
+          entry.count += ws.count;
+          entry.sources.push({ source: ws.source, count: ws.count });
         });
         words = Array.from(wordMap.values())
           .sort((a: any, b: any) => b.count - a.count)
@@ -304,7 +307,7 @@ app.get("/api/words", async (req, res) => {
         .order("count", { ascending: false })
         .limit(limit);
 
-      words = data || [];
+      words = (data || []).map((w: any) => ({ ...w, sources: [] }));
       error = queryError;
     }
 
