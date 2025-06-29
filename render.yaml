@@ -19,8 +19,8 @@ services:
   # Frontend Static Site
   - type: static
     name: wordmap-zeitgeist-frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
     envVars:
       - key: NODE_ENV
         value: production
