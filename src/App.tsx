@@ -13,11 +13,14 @@ function App() {
 
   const fetchWords = async () => {
     try {
+      // Use relative URL for API calls - will be proxied to backend in production
       const response = await fetch('/api/words')
       if (response.ok) {
         const data = await response.json()
         setWords(data.words || [])
         setLastUpdated(new Date())
+      } else {
+        console.error('Failed to fetch words:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Failed to fetch words:', error)

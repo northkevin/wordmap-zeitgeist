@@ -1,7 +1,7 @@
 services:
-  # Backend Express API
+  # Backend Express API (already deployed)
   - type: web
-    name: wordmap-zeitgeist-backend
+    name: wordmap-zeitgeist
     env: node
     buildCommand: cd backend && npm install && npm run build
     startCommand: cd backend && npm start
@@ -27,7 +27,7 @@ services:
     routes:
       - type: rewrite
         source: /api/*
-        destination: https://wordmap-zeitgeist-backend.onrender.com$1
+        destination: https://wordmap-zeitgeist.onrender.com$1
     headers:
       - path: /*
         name: X-Frame-Options
@@ -35,3 +35,6 @@ services:
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
+      - path: /*
+        name: X-XSS-Protection
+        value: 1; mode=block
