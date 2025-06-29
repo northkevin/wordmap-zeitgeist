@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import WordMap from './components/WordMap'
 import Header from './components/Header'
 import Stats from './components/Stats'
+import SourceAttribution from './components/SourceAttribution'
 import ParticleBackground from './components/ParticleBackground'
 import { WordData } from './types'
 
@@ -69,6 +70,8 @@ function App() {
           >
             <WordMap words={words} loading={loading} />
           </motion.div>
+
+          <SourceAttribution />
         </main>
       </div>
     </div>
