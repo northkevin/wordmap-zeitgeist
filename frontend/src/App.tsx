@@ -62,16 +62,16 @@ function App() {
 
           <Stats words={words} loading={loading} />
           
+          <SourceAttribution words={words} loading={loading} />
+          
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.3 }}
-            className="mt-12"
+            className="mt-8"
           >
             <WordMap words={words} loading={loading} />
           </motion.div>
-
-          <SourceAttribution />
         </main>
       </div>
     </div>
