@@ -102,8 +102,17 @@ const SOURCE_SPECIFIC_STOPWORDS: Record<string, Set<string>> = {
   'Reddit Tech Combined': new Set(['reddit', 'subreddit', 'technology', 'science', 'programming'])
 }
 
+// Database-backed stop words cache
+let databaseStopWords = new Set<string>()
+let sourceSpecificStopWords = new Map<string, Set<string>>()
+let lastStopWordsUpdate = 0
+const STOP_WORDS_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 export async function processWords(posts: Post[], supabase: SupabaseClient) {
   console.log(`🔄 Processing ${posts.length} posts for word extraction...`)
+  
+  // Update stop words cache if needed
+  await updateStopWordsCache(supabase)
   
   // First, save posts to database
   const postsToInsert = posts.map(post => ({
@@ -139,7 +148,7 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
     const sourceWordCounts = wordCountsBySource.get(post.source)!
     
     for (const word of words) {
-      if (isValidWord(word, post.source)) {
+      if (await isValidWord(word, post.source, supabase)) {
         sourceWordCounts.set(word, (sourceWordCounts.get(word) || 0) + 1)
       }
     }
@@ -244,13 +253,91 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
 }
 
 function extractWords(text: string): string[] {
+  // Remove URLs first (more comprehensive pattern)
+  text = text.replace(/https?:\/\/[^\s]+/g, ' ')
+  text = text.replace(/www\.[^\s]+/g, ' ')
+  text = text.replace(/[a-zA-Z0-9.-]+\.(com|org|net|edu|gov|co\.uk|io|ly|me|tv)[^\s]*/g, ' ')
+  
+  // Remove HTML tags and attributes more aggressively
+  text = text.replace(/<[^>]*>/g, ' ')
+  
+  // Remove HTML entities
+  text = text.replace(/&[a-zA-Z0-9#]+;/g, ' ')
+  
+  // Remove email addresses
+  text = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, ' ')
+  
+  // Remove common web artifacts
+  text = text.replace(/\b(continue\s+reading|read\s+more|click\s+here|learn\s+more)\b/gi, ' ')
+  
+  // Remove social media handles and hashtags
+  text = text.replace(/@[a-zA-Z0-9_]+/g, ' ')
+  text = text.replace(/#[a-zA-Z0-9_]+/g, ' ')
+  
+  // Remove file extensions and paths
+  text = text.replace(/\b[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|tar|gz)\b/gi, ' ')
+  
+  // Then extract words
   return text
+    .toLowerCase()
     .replace(/[^\w\s]/g, ' ') // Replace punctuation with spaces
     .split(/\s+/) // Split on whitespace
     .filter(word => word.length > 0) // Remove empty strings
 }
 
-function isValidWord(word: string, source: string): boolean {
+async function updateStopWordsCache(supabase: SupabaseClient) {
+  const now = Date.now()
+  
+  // Check if cache needs updating
+  if (now - lastStopWordsUpdate < STOP_WORDS_CACHE_TTL) {
+    return
+  }
+  
+  try {
+    console.log('🔄 Updating stop words cache from database...')
+    
+    // Fetch global stop words
+    const { data: globalStopWords, error: globalError } = await supabase
+      .from('stop_words')
+      .select('word')
+      .eq('is_active', true)
+    
+    if (globalError) {
+      console.warn('⚠️ Failed to fetch global stop words:', globalError.message)
+    } else if (globalStopWords) {
+      databaseStopWords = new Set(globalStopWords.map(row => row.word))
+      console.log(`✅ Loaded ${databaseStopWords.size} global stop words from database`)
+    }
+    
+    // Fetch source-specific stop words
+    const { data: sourceStopWords, error: sourceError } = await supabase
+      .from('source_stop_words')
+      .select('source, word')
+      .eq('is_active', true)
+    
+    if (sourceError) {
+      console.warn('⚠️ Failed to fetch source-specific stop words:', sourceError.message)
+    } else if (sourceStopWords) {
+      sourceSpecificStopWords.clear()
+      
+      for (const row of sourceStopWords) {
+        if (!sourceSpecificStopWords.has(row.source)) {
+          sourceSpecificStopWords.set(row.source, new Set())
+        }
+        sourceSpecificStopWords.get(row.source)!.add(row.word)
+      }
+      
+      console.log(`✅ Loaded source-specific stop words for ${sourceSpecificStopWords.size} sources`)
+    }
+    
+    lastStopWordsUpdate = now
+    
+  } catch (error) {
+    console.error('❌ Error updating stop words cache:', error)
+  }
+}
+
+async function isValidWord(word: string, source: string, supabase: SupabaseClient): Promise<boolean> {
   // Check basic validity first
   if (
     word.length < 3 || // At least 3 characters
@@ -261,12 +348,44 @@ function isValidWord(word: string, source: string): boolean {
   ) {
     return false
   }
-
-  // Check source-specific stopwords
+  
+  // Check database stop words
+  if (databaseStopWords.has(word)) {
+    return false
+  }
+  
+  // Check hardcoded source-specific stopwords (for backwards compatibility)
   const sourceStopwords = SOURCE_SPECIFIC_STOPWORDS[source]
   if (sourceStopwords && sourceStopwords.has(word)) {
     console.log(`🚫 Filtered source-specific word "${word}" from ${source}`)
     return false
+  }
+  
+  // Check database source-specific stopwords
+  const dbSourceStopwords = sourceSpecificStopWords.get(source)
+  if (dbSourceStopwords && dbSourceStopwords.has(word)) {
+    console.log(`🚫 Filtered database source-specific word "${word}" from ${source}`)
+    return false
+  }
+  
+  // Use database function for additional validation if available
+  try {
+    const { data, error } = await supabase.rpc('should_filter_word', {
+      check_word: word,
+      check_source: source
+    })
+    
+    if (error) {
+      console.warn(`⚠️ Error checking word filter for "${word}":`, error.message)
+      return true // Default to allowing the word if database check fails
+    }
+    
+    if (data === true) {
+      console.log(`🚫 Filtered word "${word}" from ${source} via database function`)
+      return false
+    }
+  } catch (error) {
+    console.warn(`⚠️ Database word filter check failed for "${word}":`, error)
   }
 
   return true
