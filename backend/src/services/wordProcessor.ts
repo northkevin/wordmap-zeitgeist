@@ -141,6 +141,8 @@ export async function reprocessOrphanedPosts(supabase: SupabaseClient) {
   }
 }
 
+// ORIGINAL SLOW VERSION - COMMENTED OUT FOR ROLLBACK
+/*
 async function processWordsFromPosts(
   postsWithIds: PostWithId[],
   supabase: SupabaseClient
@@ -331,6 +333,273 @@ async function processWordsFromPosts(
   );
   console.log(`   🆕 New unique words added: ${totalUniqueWords}`);
   console.log(`   📊 Sources processed: ${wordCountsBySource.size}`);
+}
+*/
+
+// NEW BATCHED VERSION - OPTIMIZED FOR PERFORMANCE
+async function processWordsFromPosts(
+  postsWithIds: PostWithId[],
+  supabase: SupabaseClient
+) {
+  const timestamp = new Date().toISOString();
+  console.log(
+    `[${timestamp}] 🚀 Batch mode: Starting optimized word processing...`
+  );
+
+  // Extract and count words by source (in memory only)
+  const wordCountsBySource = new Map<string, Map<string, number>>();
+  const debugInfo = new Map<
+    string,
+    {
+      totalPosts: number;
+      totalChars: number;
+      extractedWords: number;
+      validWords: number;
+    }
+  >();
+  const processedPostIds: string[] = [];
+
+  // Phase 1: Collect all words in memory (no DB calls)
+  for (const post of postsWithIds) {
+    const text = post.content_extract || `${post.title} ${post.content}`;
+    const originalLength = text.length;
+
+    const words = extractWords(text);
+    const validWords = words.filter((word) => isValidWord(word, post.source));
+
+    // Update debug info
+    if (!debugInfo.has(post.source)) {
+      debugInfo.set(post.source, {
+        totalPosts: 0,
+        totalChars: 0,
+        extractedWords: 0,
+        validWords: 0,
+      });
+    }
+    const debug = debugInfo.get(post.source)!;
+    debug.totalPosts++;
+    debug.totalChars += originalLength;
+    debug.extractedWords += words.length;
+    debug.validWords += validWords.length;
+
+    // Initialize source map if it doesn't exist
+    if (!wordCountsBySource.has(post.source)) {
+      wordCountsBySource.set(post.source, new Map<string, number>());
+    }
+
+    const sourceWordCounts = wordCountsBySource.get(post.source)!;
+    for (const word of validWords) {
+      sourceWordCounts.set(word, (sourceWordCounts.get(word) || 0) + 1);
+    }
+
+    processedPostIds.push(post.id);
+  }
+
+  console.log(
+    `[${timestamp}] 📊 Batch mode: Collected words from ${wordCountsBySource.size} sources`
+  );
+
+  // Phase 2: Get all unique words across all sources
+  const allUniqueWords = new Set<string>();
+  for (const [source, wordCounts] of wordCountsBySource) {
+    for (const [word] of wordCounts) {
+      allUniqueWords.add(word);
+    }
+  }
+
+  const uniqueWordList = Array.from(allUniqueWords);
+  console.log(
+    `[${timestamp}] 📝 Batch mode: Processing ${uniqueWordList.length} unique words total`
+  );
+
+  // Phase 3: Fetch all existing words in ONE query
+  const { data: existingWords, error: fetchError } = await supabase
+    .from("words")
+    .select("id, word, count")
+    .in("word", uniqueWordList);
+
+  if (fetchError) {
+    console.error(
+      `[${timestamp}] ❌ Batch mode: Error fetching existing words:`,
+      fetchError
+    );
+    return;
+  }
+
+  // Create maps for quick lookup
+  const existingWordMap = new Map<string, { id: string; count: number }>();
+  const newWords: Array<{ word: string; count: number; last_seen: string }> =
+    [];
+  const wordUpdates: Array<{ id: string; count: number; last_seen: string }> =
+    [];
+
+  existingWords?.forEach((word) => {
+    existingWordMap.set(word.word, { id: word.id, count: word.count });
+  });
+
+  // Phase 4: Prepare word operations
+  for (const word of uniqueWordList) {
+    const totalCount = Array.from(wordCountsBySource.values()).reduce(
+      (sum, sourceWords) => sum + (sourceWords.get(word) || 0),
+      0
+    );
+
+    if (existingWordMap.has(word)) {
+      // Word exists - prepare update
+      const existing = existingWordMap.get(word)!;
+      wordUpdates.push({
+        id: existing.id,
+        count: existing.count + totalCount,
+        last_seen: new Date().toISOString(),
+      });
+    } else {
+      // New word - prepare insert
+      newWords.push({
+        word,
+        count: totalCount,
+        last_seen: new Date().toISOString(),
+      });
+    }
+  }
+
+  // Phase 5: Batch insert new words
+  let totalUniqueWords = 0;
+  if (newWords.length > 0) {
+    console.log(
+      `[${timestamp}] 📝 Batch mode: Inserting ${newWords.length} new words`
+    );
+    const { data: insertedWords, error: insertError } = await supabase
+      .from("words")
+      .insert(newWords)
+      .select("id, word");
+
+    if (insertError) {
+      console.error(
+        `[${timestamp}] ❌ Batch mode: Error inserting new words:`,
+        insertError
+      );
+      return;
+    }
+
+    // Add new words to the map
+    insertedWords?.forEach((word) => {
+      existingWordMap.set(word.word, { id: word.id, count: 0 });
+    });
+    totalUniqueWords = insertedWords?.length || 0;
+  }
+
+  // Phase 6: Batch update existing words
+  if (wordUpdates.length > 0) {
+    console.log(
+      `[${timestamp}] 📝 Batch mode: Updating ${wordUpdates.length} existing words`
+    );
+
+    // Process updates in chunks of 1000
+    const chunkSize = 1000;
+    for (let i = 0; i < wordUpdates.length; i += chunkSize) {
+      const chunk = wordUpdates.slice(i, i + chunkSize);
+
+      for (const update of chunk) {
+        const { error: updateError } = await supabase
+          .from("words")
+          .update({
+            count: update.count,
+            last_seen: update.last_seen,
+          })
+          .eq("id", update.id);
+
+        if (updateError) {
+          console.error(
+            `[${timestamp}] ❌ Batch mode: Error updating word ${update.id}:`,
+            updateError
+          );
+        }
+      }
+    }
+  }
+
+  // Phase 7: Batch upsert word_sources
+  console.log(
+    `[${timestamp}] 📝 Batch mode: Processing word_sources in batches`
+  );
+  const wordSourceOperations: Array<{
+    word_id: string;
+    source: string;
+    count: number;
+    last_seen: string;
+  }> = [];
+
+  for (const [source, wordCounts] of wordCountsBySource) {
+    for (const [word, count] of wordCounts) {
+      const wordId = existingWordMap.get(word)?.id;
+      if (wordId) {
+        wordSourceOperations.push({
+          word_id: wordId,
+          source,
+          count,
+          last_seen: new Date().toISOString(),
+        });
+      }
+    }
+  }
+
+  // Process word_sources in chunks of 1000
+  const chunkSize = 1000;
+  let totalWordsProcessed = 0;
+
+  for (let i = 0; i < wordSourceOperations.length; i += chunkSize) {
+    const chunk = wordSourceOperations.slice(i, i + chunkSize);
+
+    // Use upsert to handle both inserts and updates
+    const { error: upsertError } = await supabase
+      .from("word_sources")
+      .upsert(chunk, {
+        onConflict: "word_id,source",
+        ignoreDuplicates: false,
+      });
+
+    if (upsertError) {
+      console.error(
+        `[${timestamp}] ❌ Batch mode: Error upserting word_sources chunk ${
+          i / chunkSize + 1
+        }:`,
+        upsertError
+      );
+    } else {
+      totalWordsProcessed += chunk.reduce((sum, op) => sum + op.count, 0);
+    }
+  }
+
+  // Phase 8: Mark posts as processed
+  if (processedPostIds.length > 0) {
+    const { error: updateError } = await supabase
+      .from("posts")
+      .update({ processed: true })
+      .in("id", processedPostIds);
+
+    if (updateError) {
+      console.error(
+        `[${timestamp}] ❌ Batch mode: Error marking posts as processed:`,
+        updateError
+      );
+    } else {
+      console.log(
+        `[${timestamp}] ✅ Batch mode: Marked ${processedPostIds.length} posts as processed`
+      );
+    }
+  }
+
+  console.log(`[${timestamp}] 🎉 Batch mode: Word processing complete:`);
+  console.log(
+    `   📈 Total word mentions processed: ${totalWordsProcessed.toLocaleString()}`
+  );
+  console.log(`   🆕 New unique words added: ${totalUniqueWords}`);
+  console.log(`   📊 Sources processed: ${wordCountsBySource.size}`);
+  console.log(
+    `   🚀 Batch mode: Reduced from ~${uniqueWordList.length * 4} queries to ~${
+      Math.ceil(wordSourceOperations.length / chunkSize) + 5
+    } queries`
+  );
 }
 
 async function getTotalWordCount(supabase: SupabaseClient): Promise<number> {
