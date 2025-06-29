@@ -6,6 +6,7 @@ import cron from 'node-cron'
 import { createClient } from '@supabase/supabase-js'
 import { scrapeRSSFeeds } from './services/scraper.js'
 import { processWords } from './services/wordProcessor.js'
+import { apiManager } from './services/apiManager.js'
 
 // Load environment variables
 dotenv.config()
@@ -231,6 +232,73 @@ app.get('/api/sources', async (req, res) => {
   }
 })
 
+// API Manager endpoints
+app.get('/api/manager/sources', (req, res) => {
+  console.log('API Manager sources requested')
+  try {
+    const sources = apiManager.getAllSources()
+    const sourceInfo = sources.map(sourceId => {
+      const info = apiManager.getSourceInfo(sourceId)
+      return {
+        id: sourceId,
+        name: info?.config.name,
+        rateLimit: info?.rateLimit
+      }
+    })
+    
+    res.json({ sources: sourceInfo })
+  } catch (error) {
+    console.error('Error fetching API sources:', error)
+    res.status(500).json({ error: 'Failed to fetch API sources' })
+  }
+})
+
+app.get('/api/manager/logs', (req, res) => {
+  console.log('API Manager logs requested')
+  try {
+    const sourceId = req.query.source as string
+    const limit = parseInt(req.query.limit as string) || 100
+    
+    const logs = apiManager.constructor.getRequestLogs(sourceId, limit)
+    const stats = apiManager.constructor.getRequestStats(sourceId)
+    
+    res.json({ logs, stats })
+  } catch (error) {
+    console.error('Error fetching API logs:', error)
+    res.status(500).json({ error: 'Failed to fetch API logs' })
+  }
+})
+
+app.post('/api/manager/scrape', async (req, res) => {
+  console.log('API Manager scrape requested')
+  try {
+    const { secret, source, endpoint, params } = req.body
+    
+    if (secret !== process.env.SCRAPE_SECRET) {
+      console.warn('Unauthorized API scrape attempt')
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    if (!source || !endpoint) {
+      return res.status(400).json({ error: 'Source and endpoint are required' })
+    }
+
+    console.log(`Starting API scrape: ${source}/${endpoint}`)
+    const result = await apiManager.scrapeApi(source, endpoint, params || {})
+    
+    res.json({
+      success: result.success,
+      source: result.source,
+      timestamp: result.timestamp,
+      dataCount: Array.isArray(result.data) ? result.data.length : (result.data ? 1 : 0),
+      error: result.error
+    })
+  } catch (error) {
+    console.error('API scraping error:', error)
+    res.status(500).json({ error: 'API scraping failed' })
+  }
+})
+
 // Scrape endpoint (protected)
 app.post('/api/scrape', async (req, res) => {
   console.log('Scrape endpoint requested')
@@ -304,6 +372,13 @@ async function startServer() {
   console.log(`   SUPABASE_ANON_KEY: ${process.env.SUPABASE_ANON_KEY ? '✅ configured' : '⚠️  missing (optional)'}`)
   console.log(`   SCRAPE_SECRET: ${process.env.SCRAPE_SECRET ? '✅ configured' : '❌ missing'}`)
   
+  // API Keys validation
+  console.log('🔑 API Keys Configuration:')
+  console.log(`   YOUTUBE_API_KEY: ${process.env.YOUTUBE_API_KEY ? '✅ configured' : '⚠️  missing (optional)'}`)
+  console.log(`   NEWSAPI_KEY: ${process.env.NEWSAPI_KEY ? '✅ configured' : '⚠️  missing (optional)'}`)
+  console.log(`   REDDIT_CLIENT_ID: ${process.env.REDDIT_CLIENT_ID ? '✅ configured' : '⚠️  missing (optional)'}`)
+  console.log(`   REDDIT_CLIENT_SECRET: ${process.env.REDDIT_CLIENT_SECRET ? '✅ configured' : '⚠️  missing (optional)'}`)
+  
   // Validate database
   const dbValid = await validateDatabase()
   
@@ -320,6 +395,7 @@ async function startServer() {
     console.log(`📊 Words API: http://localhost:${port}/api/words`)
     console.log(`📈 Sources API: http://localhost:${port}/api/sources`)
     console.log(`🔄 Scrape API: http://localhost:${port}/api/scrape`)
+    console.log(`🤖 API Manager: http://localhost:${port}/api/manager/*`)
     console.log(`⏰ Scheduled scraping: Every 30 minutes`)
     console.log('='.repeat(50))
     
