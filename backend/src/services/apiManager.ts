@@ -277,7 +277,7 @@ class NewsApiSource extends ApiSource {
 
 // Reddit API implementation (using OAuth)
 class RedditApiSource extends ApiSource {
-  private accessToken: string | null = null
+  private accessToken: string = ''
   private tokenExpiry: Date | null = null
 
   protected async getAccessToken(): Promise<string> {
@@ -310,6 +310,11 @@ class RedditApiSource extends ApiSource {
     }
 
     const data = await response.json()
+    
+    if (!data.access_token) {
+      throw new Error('Reddit OAuth response missing access token')
+    }
+    
     this.accessToken = data.access_token
     this.tokenExpiry = new Date(Date.now() + (data.expires_in * 1000))
     
