@@ -22,6 +22,7 @@ interface SourceAttributionProps {
 }
 
 const sourceMapping: Record<string, { icon: string; url: string }> = {
+  // RSS Feed Sources
   'Hacker News': { icon: 'hn', url: 'https://news.ycombinator.com' },
   'TechCrunch': { icon: 'tc', url: 'https://techcrunch.com' },
   'BBC News': { icon: 'bbc', url: 'https://bbc.com/news' },
@@ -37,7 +38,13 @@ const sourceMapping: Record<string, { icon: string; url: string }> = {
   'Reddit r/all': { icon: 'reddit', url: 'https://reddit.com/r/all' },
   'Reddit r/popular': { icon: 'reddit', url: 'https://reddit.com/r/popular' },
   'Reddit r/worldnews': { icon: 'reddit', url: 'https://reddit.com/r/worldnews' },
-  'Reddit Tech Combined': { icon: 'reddit', url: 'https://reddit.com/r/technology+science+programming' }
+  'Reddit Tech Combined': { icon: 'reddit', url: 'https://reddit.com/r/technology+science+programming' },
+  
+  // API Manager Sources
+  'YouTube': { icon: 'youtube', url: 'https://youtube.com' },
+  'NewsAPI': { icon: 'newsapi', url: 'https://newsapi.org' },
+  'Reddit': { icon: 'reddit', url: 'https://reddit.com' },
+  'Twitter': { icon: 'twitter', url: 'https://twitter.com' }
 }
 
 const SourceIcon: React.FC<{ source: Source }> = ({ source }) => {
@@ -85,6 +92,21 @@ const SourceIcon: React.FC<{ source: Source }> = ({ source }) => {
     reddit: (
       <div className="w-8 h-8 bg-orange-600 rounded flex items-center justify-center text-white font-bold text-xs">
         R
+      </div>
+    ),
+    youtube: (
+      <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center text-white font-bold text-xs">
+        YT
+      </div>
+    ),
+    newsapi: (
+      <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-xs">
+        API
+      </div>
+    ),
+    twitter: (
+      <div className="w-8 h-8 bg-blue-400 rounded flex items-center justify-center text-white font-bold text-xs">
+        X
       </div>
     )
   }
@@ -181,7 +203,7 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({ words, loading })
       .sort((a, b) => b.wordCount - a.wordCount)
 
     // Determine how many sources can fit (responsive)
-    const maxVisible = 8
+    const maxVisible = 10 // Increased from 8 to accommodate more sources
     const visibleSources = sortedSources.slice(0, maxVisible)
     const hiddenCount = Math.max(0, sortedSources.length - maxVisible)
 
@@ -199,7 +221,7 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({ words, loading })
         Aggregating from:
       </p>
       
-      <div className="flex flex-wrap justify-center items-center gap-6 max-w-5xl mx-auto">
+      <div className="flex flex-wrap justify-center items-center gap-6 max-w-6xl mx-auto">
         {visibleSources.map((source, index) => (
           <motion.a
             key={`${source.icon}-${source.name}`}
