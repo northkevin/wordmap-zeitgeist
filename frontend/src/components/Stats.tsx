@@ -35,22 +35,22 @@ const Stats: React.FC<StatsProps> = ({ words, loading }) => {
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
       {stats.map((stat, index) => (
         <motion.div
           key={stat.label}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: index * 0.1 }}
-          className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-gray-600 transition-colors"
+          className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-3 border border-gray-700 hover:border-gray-600 transition-colors"
         >
           <div className="flex items-center space-x-4">
-            <div className={`p-3 rounded-lg bg-gray-700/50 ${stat.color}`}>
+            <div className={`p-2 rounded-lg bg-gray-700/50 ${stat.color}`}>
               <stat.icon className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-gray-400 text-sm">{stat.label}</p>
-              <p className={`text-2xl font-bold ${stat.color}`}>
+              <p className="text-gray-400 text-xs">{stat.label}</p>
+              <p className={`text-xl font-bold ${stat.color}`}>
                 {stat.value}
               </p>
             </div>
