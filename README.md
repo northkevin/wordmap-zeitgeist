@@ -24,7 +24,12 @@ This is a monorepo containing:
    ```bash
    git clone <repository-url>
    cd wordmap-zeitgeist
-   npm run install:all
+   
+   # Install frontend dependencies
+   cd frontend && npm install
+   
+   # Install backend dependencies
+   cd ../backend && npm install
    ```
 
 2. **Set up environment variables:**
@@ -37,18 +42,28 @@ This is a monorepo containing:
    ```
 
 3. **Run the development servers:**
+   
+   **Frontend (in one terminal):**
    ```bash
-   npm run dev
+   cd frontend && npm run dev
    ```
    
-   This starts both frontend (http://localhost:5173) and backend (http://localhost:3001) concurrently.
+   **Backend (in another terminal):**
+   ```bash
+   cd backend && npm run dev
+   ```
+   
+   Frontend will be available at http://localhost:5173
+   Backend will be available at http://localhost:3001
 
 ### Individual Commands
 
-- **Frontend only:** `npm run dev:frontend`
-- **Backend only:** `npm run dev:backend`
-- **Build all:** `npm run build`
-- **Lint all:** `npm run lint`
+- **Frontend only:** `cd frontend && npm run dev`
+- **Backend only:** `cd backend && npm run dev`
+- **Build frontend:** `cd frontend && npm run build`
+- **Build backend:** `cd backend && npm run build`
+- **Lint frontend:** `cd frontend && npm run lint`
+- **Lint backend:** `cd backend && npm run lint`
 
 ## Features
 
