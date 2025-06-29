@@ -13,21 +13,21 @@ const PORT = process.env.PORT || 3001
 
 // Check for required environment variables
 const supabaseUrl = process.env.SUPABASE_URL
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseServiceRoleKey) {
   console.error('❌ Missing required environment variables:')
   if (!supabaseUrl) console.error('  - SUPABASE_URL is not set')
-  if (!supabaseAnonKey) console.error('  - SUPABASE_ANON_KEY is not set')
+  if (!supabaseServiceRoleKey) console.error('  - SUPABASE_SERVICE_ROLE_KEY is not set')
   console.error('\n📝 Please create a backend/.env file with your Supabase credentials:')
   console.error('   SUPABASE_URL=your_supabase_url')
-  console.error('   SUPABASE_ANON_KEY=your_supabase_anon_key')
+  console.error('   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key')
   console.error('   SCRAPE_SECRET=your_scrape_secret')
   process.exit(1)
 }
 
-// Supabase client
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Supabase client with service role key for backend operations
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
 // Middleware
 app.use(helmet())
