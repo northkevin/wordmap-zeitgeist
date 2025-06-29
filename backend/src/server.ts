@@ -378,6 +378,7 @@ async function startServer() {
   console.log(`   NEWSAPI_KEY: ${process.env.NEWSAPI_KEY ? '✅ configured' : '⚠️  missing (optional)'}`)
   console.log(`   REDDIT_CLIENT_ID: ${process.env.REDDIT_CLIENT_ID ? '✅ configured' : '⚠️  missing (optional)'}`)
   console.log(`   REDDIT_CLIENT_SECRET: ${process.env.REDDIT_CLIENT_SECRET ? '✅ configured' : '⚠️  missing (optional)'}`)
+  console.log(`   TWITTER_BEARER_TOKEN: ${process.env.TWITTER_BEARER_TOKEN ? '✅ configured' : '⚠️  missing (optional)'}`)
   
   // Validate database
   const dbValid = await validateDatabase()
