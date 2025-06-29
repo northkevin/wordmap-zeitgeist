@@ -1,134 +1,56 @@
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-
-interface SourceStats {
-  source: string;
-  unique_words: number;
-  total_word_count: number;
-  last_updated: string;
-}
+import { WordData } from "../types";
+import {
+  SiReddit,
+  SiCnn,
+  SiTechcrunch,
+  SiYoutube,
+  SiTheguardian,
+  SiOreilly,
+  SiX,
+} from "react-icons/si";
 
 interface Source {
   name: string;
   icon: string;
   url: string;
   wordCount: number;
+  logo?: string;
 }
 
 interface SourceBarProps {
+  words: WordData[];
   loading: boolean;
   timeRange: "24h" | "all";
 }
 
-const sourceMapping: Record<string, { icon: string; url: string }> = {
-  // RSS Feed Sources
-  "Hacker News": { icon: "hn", url: "https://news.ycombinator.com" },
-  TechCrunch: { icon: "tc", url: "https://techcrunch.com" },
-  "BBC News": { icon: "bbc", url: "https://bbc.com/news" },
-  Wired: { icon: "wired", url: "https://wired.com" },
-  CNN: { icon: "cnn", url: "https://cnn.com" },
-  "CNN Top Stories": { icon: "cnn", url: "https://cnn.com" },
-  "CNN World": { icon: "cnn", url: "https://cnn.com/world" },
-  "O'Reilly Radar": { icon: "oreilly", url: "https://www.oreilly.com/radar/" },
-  "The Guardian UK": { icon: "guardian", url: "https://theguardian.com/uk" },
-  "The Guardian World": {
-    icon: "guardian",
-    url: "https://theguardian.com/world",
-  },
-  "The Guardian US": {
-    icon: "guardian",
-    url: "https://theguardian.com/us-news",
-  },
-  "NPR Main News": { icon: "npr", url: "https://npr.org" },
-  "Reddit r/all": { icon: "reddit", url: "https://reddit.com/r/all" },
-  "Reddit r/popular": { icon: "reddit", url: "https://reddit.com/r/popular" },
-  "Reddit r/worldnews": {
-    icon: "reddit",
-    url: "https://reddit.com/r/worldnews",
-  },
-  "Reddit Tech Combined": {
-    icon: "reddit",
-    url: "https://reddit.com/r/technology+science+programming",
-  },
-
-  // API Manager Sources
-  YouTube: { icon: "youtube", url: "https://youtube.com" },
-  NewsAPI: { icon: "newsapi", url: "https://newsapi.org" },
-  Reddit: { icon: "reddit", url: "https://reddit.com" },
-  Twitter: { icon: "twitter", url: "https://twitter.com" },
+// Map source name to icon component or fallback SVG path
+const sourceIconMap: Record<string, React.ReactNode> = {
+  "Reddit r/all": <SiReddit size={24} />, // Reddit
+  "Reddit r/popular": <SiReddit size={24} />,
+  "Reddit r/worldnews": <SiReddit size={24} />,
+  "Reddit Tech Combined": <SiReddit size={24} />,
+  Reddit: <SiReddit size={24} />,
+  CNN: <SiCnn size={24} />,
+  "CNN Top Stories": <SiCnn size={24} />,
+  "CNN World": <SiCnn size={24} />,
+  TechCrunch: <SiTechcrunch size={24} />,
+  Twitter: <SiX size={24} />,
+  YouTube: <SiYoutube size={24} />,
+  "The Guardian UK": <SiTheguardian size={24} />,
+  "The Guardian World": <SiTheguardian size={24} />,
+  "The Guardian US": <SiTheguardian size={24} />,
+  "O'Reilly Radar": <SiOreilly size={24} />,
 };
 
-const SourceIcon: React.FC<{ source: Source }> = ({ source }) => {
-  const iconComponents = {
-    hn: (
-      <div className="w-6 h-6 bg-orange-500 rounded flex items-center justify-center text-white font-bold text-xs">
-        Y
-      </div>
-    ),
-    tc: (
-      <div className="w-6 h-6 bg-green-500 rounded flex items-center justify-center text-white font-bold text-xs">
-        TC
-      </div>
-    ),
-    bbc: (
-      <div className="w-6 h-6 bg-red-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        BBC
-      </div>
-    ),
-    wired: (
-      <div className="w-6 h-6 bg-black border border-white rounded flex items-center justify-center text-white font-bold text-xs">
-        W
-      </div>
-    ),
-    cnn: (
-      <div className="w-6 h-6 bg-red-700 rounded flex items-center justify-center text-white font-bold text-xs">
-        CNN
-      </div>
-    ),
-    oreilly: (
-      <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        O
-      </div>
-    ),
-    guardian: (
-      <div className="w-6 h-6 bg-blue-800 rounded flex items-center justify-center text-white font-bold text-xs">
-        G
-      </div>
-    ),
-    npr: (
-      <div className="w-6 h-6 bg-purple-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        NPR
-      </div>
-    ),
-    reddit: (
-      <div className="w-6 h-6 bg-orange-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        R
-      </div>
-    ),
-    youtube: (
-      <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center text-white font-bold text-xs">
-        YT
-      </div>
-    ),
-    newsapi: (
-      <div className="w-6 h-6 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        API
-      </div>
-    ),
-    twitter: (
-      <div className="w-6 h-6 bg-blue-400 rounded flex items-center justify-center text-white font-bold text-xs">
-        X
-      </div>
-    ),
-  };
-
-  return (
-    iconComponents[source.icon as keyof typeof iconComponents] || (
-      <div className="w-6 h-6 bg-gray-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        ?
-      </div>
-    )
-  );
+const fallbackLogoMap: Record<string, string> = {
+  // For sources not in react-icons
+  "Hacker News": "/logos/hn.svg",
+  "BBC News": "/logos/bbc.svg",
+  Wired: "/logos/wired.svg",
+  "NPR Main News": "/logos/npr.svg",
+  NewsAPI: "/logos/newsapi.svg",
 };
 
 const formatWordCount = (count: number): string => {
@@ -137,84 +59,50 @@ const formatWordCount = (count: number): string => {
   return count.toString();
 };
 
-const SourceBar: React.FC<SourceBarProps> = ({ loading, timeRange }) => {
-  const [sourceStats, setSourceStats] = useState<SourceStats[]>([]);
-  const [statsLoading, setStatsLoading] = useState(true);
-
-  // Fetch real source statistics from backend
-  useEffect(() => {
-    const fetchSourceStats = async () => {
-      try {
-        const response = await fetch(`/api/sources?timeRange=${timeRange}`);
-        if (response.ok) {
-          const data = await response.json();
-          setSourceStats(data.sources || []);
-        } else {
-          console.error("Failed to fetch source statistics:", response.status);
-        }
-      } catch (error) {
-        console.error("Failed to fetch source statistics:", error);
-      } finally {
-        setStatsLoading(false);
-      }
-    };
-
-    fetchSourceStats();
-  }, [timeRange]);
-
-  const sources = useMemo(() => {
-    if (loading || statsLoading) {
-      // Show placeholder sources when loading
-      return Object.entries(sourceMapping)
-        .slice(0, 6)
-        .map(([name, config]) => ({
-          name,
-          icon: config.icon,
-          url: config.url,
-          wordCount: 0,
-        }));
-    }
-
-    // Convert source stats to display format
-    const sourcesWithCounts: Source[] = sourceStats
-      .map((stat) => {
-        const mapping = sourceMapping[stat.source];
-        if (!mapping) {
-          console.warn(`No mapping found for source: ${stat.source}`);
-          return null;
-        }
-
-        return {
-          name: stat.source,
-          icon: mapping.icon,
-          url: mapping.url,
-          wordCount: stat.total_word_count,
-        };
-      })
-      .filter((source): source is Source => source !== null);
-
-    // Group sources by icon (combine similar sources like multiple CNN feeds)
-    const groupedSources = new Map<string, Source>();
-
-    sourcesWithCounts.forEach((source) => {
-      const existing = groupedSources.get(source.icon);
-      if (existing) {
-        // Combine word counts for sources with same icon
-        existing.wordCount += source.wordCount;
-        // Use the shorter name if combining
-        if (source.name.length < existing.name.length) {
-          existing.name = source.name;
-        }
-      } else {
-        groupedSources.set(source.icon, { ...source });
+const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
+  // Map of source name to count (sum of counts for words in top 50)
+  const sourceCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    words.forEach((w: any) => {
+      if (w.source) {
+        counts[w.source] = (counts[w.source] || 0) + w.count;
       }
     });
+    return counts;
+  }, [words]);
 
-    // Sort by word count (descending) and take top 8
-    return Array.from(groupedSources.values())
-      .sort((a, b) => b.wordCount - a.wordCount)
-      .slice(0, 8);
-  }, [sourceStats, loading, statsLoading]);
+  // Build display sources (group by icon, sum counts)
+  const sources: Source[] = useMemo(() => {
+    const temp: Record<string, Source> = {};
+    Object.keys({ ...sourceIconMap, ...fallbackLogoMap }).forEach((name) => {
+      const count = sourceCounts[name] || 0;
+      if (count > 0) {
+        const icon = sourceIconMap[name] ? name : undefined;
+        const logo = fallbackLogoMap[name];
+        const iconKey = icon || logo || name;
+        if (!temp[iconKey]) {
+          temp[iconKey] = {
+            name,
+            icon: iconKey,
+            url: "#", // You can add URLs if needed
+            wordCount: count,
+            logo,
+          };
+        } else {
+          temp[iconKey].wordCount += count;
+        }
+      }
+    });
+    return Object.values(temp).sort((a, b) => b.wordCount - a.wordCount);
+  }, [sourceCounts]);
+
+  if (loading) {
+    return (
+      <div className="bg-[#1a1a2e] border border-white/10 rounded-lg h-16 flex items-center justify-center px-8">
+        <span className="text-gray-500 text-sm">Loading sources...</span>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -226,26 +114,36 @@ const SourceBar: React.FC<SourceBarProps> = ({ loading, timeRange }) => {
       <div className="flex items-center space-x-6">
         {sources.map((source, index) => (
           <React.Fragment key={source.icon}>
-            <motion.a
-              href={source.url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <motion.span
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
-              className="flex items-center space-x-2 group"
+              className="flex items-center group"
               title={`${
                 source.name
-              }: ${source.wordCount.toLocaleString()} words`}
+              }: ${source.wordCount.toLocaleString()} mentions`}
             >
-              <SourceIcon source={source} />
-              <span className="text-gray-400 text-sm font-medium">
+              {sourceIconMap[source.name] ? (
+                <span
+                  className="mr-2"
+                  style={{ display: "inline-flex", alignItems: "center" }}
+                >
+                  {sourceIconMap[source.name]}
+                </span>
+              ) : source.logo ? (
+                <img
+                  src={source.logo}
+                  alt={source.name}
+                  className="h-6 w-auto mr-2"
+                  style={{ display: "inline-block", verticalAlign: "middle" }}
+                  draggable={false}
+                />
+              ) : null}
+              <span className="text-gray-400 text-sm font-medium ml-1">
                 {formatWordCount(source.wordCount)}
               </span>
-            </motion.a>
-
-            {/* Divider dot (not after the last item) */}
+            </motion.span>
             {index < sources.length - 1 && (
-              <span className="text-gray-500 text-sm">•</span>
+              <span className="text-gray-500 text-sm mx-2">•</span>
             )}
           </React.Fragment>
         ))}
