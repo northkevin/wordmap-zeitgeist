@@ -1,20 +1,20 @@
-import React from 'react'
-import { motion } from 'framer-motion'
-import { RefreshCw, Clock, Globe } from 'lucide-react'
+import React from "react";
+import { motion } from "framer-motion";
+import { RefreshCw, Clock, Globe } from "lucide-react";
 
 interface HeaderProps {
-  onRefresh: () => void
-  lastUpdated: Date | null
+  onRefresh: () => void;
+  lastUpdated: Date | null;
 }
 
 const Header: React.FC<HeaderProps> = ({ onRefresh, lastUpdated }) => {
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  }
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
 
   return (
     <motion.header
@@ -25,35 +25,35 @@ const Header: React.FC<HeaderProps> = ({ onRefresh, lastUpdated }) => {
     >
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Globe className="w-8 h-8 text-blue-400" />
-            <span className="text-xl font-semibold">Wordmap Zeitgeist</span>
+          <div className="flex items-center space-x-2">
+            <Globe className="w-7 h-7 text-blue-400" />
+            <span className="text-lg font-semibold">Wordmap Zeitgeist</span>
           </div>
-          
-          <div className="flex items-center space-x-6">
+
+          <div className="flex items-center space-x-4">
             {lastUpdated && (
               <div className="flex items-center space-x-2 text-gray-400">
                 <Clock className="w-4 h-4" />
-                <span className="text-sm">
+                <span className="text-xs">
                   Updated: {formatTime(lastUpdated)}
                 </span>
               </div>
             )}
-            
+
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onRefresh}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              className="flex items-center space-x-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
             >
-              <RefreshCw className="w-4 h-4" />
-              <span>Refresh</span>
+              <RefreshCw className="w-3 h-3" />
+              <span className="text-xs">Refresh</span>
             </motion.button>
           </div>
         </div>
       </div>
     </motion.header>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;

@@ -191,11 +191,16 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({
           return null;
         }
 
+        // Only count words that are currently displayed on the word map
+        const wordCount = words
+          .filter((w) => w.source === stat.source)
+          .reduce((sum, w) => sum + w.count, 0);
+
         return {
           name: stat.source,
           icon: mapping.icon,
           url: mapping.url,
-          wordCount: stat.total_word_count,
+          wordCount, // Only word map mentions
         };
       })
       .filter((source): source is Source => source !== null);
@@ -228,7 +233,7 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({
     const hiddenCount = Math.max(0, sortedSources.length - maxVisible);
 
     return { visibleSources, hiddenCount };
-  }, [sourceStats, loading, statsLoading]);
+  }, [sourceStats, loading, statsLoading, words]);
 
   return (
     <motion.div
@@ -237,10 +242,6 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({
       transition={{ duration: 0.8, delay: 0.2 }}
       className="text-center py-6 mb-8"
     >
-      <p className="text-gray-400 text-sm mb-6 font-medium">
-        Aggregating from:
-      </p>
-
       <div className="grid grid-cols-8 md:grid-cols-12 lg:grid-cols-15 gap-3 md:gap-4 max-w-7xl mx-auto px-4 justify-items-center">
         {visibleSources.map((source, index) => (
           <motion.a

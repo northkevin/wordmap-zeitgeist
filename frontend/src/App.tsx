@@ -62,12 +62,12 @@ function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-4"
+            className="text-center mb-8"
           >
-            <h1 className="text-6xl md:text-8xl font-bold mb-4 text-gradient glow-text">
+            <h1 className="text-7xl md:text-9xl font-bold mb-4 text-gradient glow-text leading-tight">
               Zeitgeist
             </h1>
-            <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-snug">
               Capturing the pulse of the internet through real-time analysis of
               global conversations
             </p>
