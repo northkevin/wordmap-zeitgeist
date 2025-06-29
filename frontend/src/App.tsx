@@ -86,7 +86,11 @@ function App() {
           /> */}
 
           <div className="mb-12">
-            <SourceBar loading={loading} timeRange={timeRange} />
+            <SourceBar
+              words={words.slice(0, 50)}
+              loading={loading}
+              timeRange={timeRange}
+            />
           </div>
 
           <motion.div
