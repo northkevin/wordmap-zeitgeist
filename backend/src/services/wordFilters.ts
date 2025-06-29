@@ -594,6 +594,10 @@ export const TIME_DATE_PATTERNS = [
   /\b\d{1,2}:\d{2}(\s*(am|pm))?\b/gi,
   /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g,
   /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{2,4}\b/gi,
+  // day of the week
+  /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi,
+  // month of the year
+  /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/gi,
 ];
 
 // Number patterns with units to remove
