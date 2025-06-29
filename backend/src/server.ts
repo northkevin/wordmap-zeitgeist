@@ -249,13 +249,64 @@ app.get("/api/words", async (req, res) => {
   console.log("Words endpoint requested");
   try {
     const limit = parseInt(req.query.limit as string) || 100;
-    console.log(`Fetching top ${limit} words from database`);
+    const timeRange = (req.query.timeRange as string) || "24h";
+    console.log(
+      `Fetching top ${limit} words from database with timeRange: ${timeRange}`
+    );
 
-    const { data: words, error } = await supabase
-      .from("words")
-      .select("*")
-      .order("count", { ascending: false })
-      .limit(limit);
+    let words: any[] = [];
+    let error: any = null;
+
+    if (timeRange === "24h") {
+      // Query for last 24 hours
+      const { data, error: queryError } = await supabase
+        .from("word_sources")
+        .select(
+          `
+          word_id,
+          count,
+          last_seen,
+          words!inner(word, id)
+        `
+        )
+        .gte(
+          "last_seen",
+          new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        );
+
+      if (queryError) {
+        error = queryError;
+      } else {
+        // Group by word and sum counts
+        const wordMap = new Map();
+        data?.forEach((ws: any) => {
+          const word = ws.words;
+          if (wordMap.has(word.id)) {
+            wordMap.get(word.id).count += ws.count;
+          } else {
+            wordMap.set(word.id, {
+              id: word.id,
+              word: word.word,
+              count: ws.count,
+              last_seen: ws.last_seen,
+            });
+          }
+        });
+        words = Array.from(wordMap.values())
+          .sort((a: any, b: any) => b.count - a.count)
+          .slice(0, limit);
+      }
+    } else {
+      // Query for all time - use the original simple approach
+      const { data, error: queryError } = await supabase
+        .from("words")
+        .select("*")
+        .order("count", { ascending: false })
+        .limit(limit);
+
+      words = data || [];
+      error = queryError;
+    }
 
     if (error) {
       console.error("Database error:", error);
