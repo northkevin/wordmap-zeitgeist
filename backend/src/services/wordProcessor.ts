@@ -21,6 +21,8 @@ const STOP_WORDS = new Set([
 ])
 
 export async function processWords(posts: Post[], supabase: SupabaseClient) {
+  console.log(`🔄 Processing ${posts.length} posts for word extraction...`)
+  
   // First, save posts to database
   const postsToInsert = posts.map(post => ({
     source: post.source,
@@ -35,58 +37,128 @@ export async function processWords(posts: Post[], supabase: SupabaseClient) {
     .insert(postsToInsert)
 
   if (postsError) {
-    console.error('Error saving posts:', postsError)
+    console.error('❌ Error saving posts:', postsError)
+  } else {
+    console.log(`✅ Saved ${postsToInsert.length} posts to database`)
   }
 
-  // Extract and count words
-  const wordCounts = new Map<string, number>()
+  // Extract and count words by source
+  const wordCountsBySource = new Map<string, Map<string, number>>()
   
   for (const post of posts) {
     const text = `${post.title} ${post.content}`.toLowerCase()
     const words = extractWords(text)
     
+    // Initialize source map if it doesn't exist
+    if (!wordCountsBySource.has(post.source)) {
+      wordCountsBySource.set(post.source, new Map<string, number>())
+    }
+    
+    const sourceWordCounts = wordCountsBySource.get(post.source)!
+    
     for (const word of words) {
       if (isValidWord(word)) {
-        wordCounts.set(word, (wordCounts.get(word) || 0) + 1)
+        sourceWordCounts.set(word, (sourceWordCounts.get(word) || 0) + 1)
       }
     }
   }
 
-  // Update word counts in database
-  for (const [word, count] of wordCounts) {
-    try {
-      // Try to update existing word
-      const { data: existingWord } = await supabase
-        .from('words')
-        .select('count')
-        .eq('word', word)
-        .single()
+  console.log(`📊 Processing words from ${wordCountsBySource.size} sources...`)
 
-      if (existingWord) {
-        // Update existing word
-        await supabase
+  // Process each source's words
+  let totalWordsProcessed = 0
+  let totalUniqueWords = 0
+
+  for (const [source, wordCounts] of wordCountsBySource) {
+    console.log(`📝 Processing ${wordCounts.size} unique words from ${source}...`)
+    
+    for (const [word, count] of wordCounts) {
+      try {
+        // First, ensure the word exists in the main words table
+        let wordId: string
+        
+        const { data: existingWord } = await supabase
           .from('words')
-          .update({
-            count: existingWord.count + count,
-            last_seen: new Date().toISOString()
-          })
+          .select('id, count')
           .eq('word', word)
-      } else {
-        // Insert new word
-        await supabase
-          .from('words')
-          .insert({
-            word,
-            count,
-            last_seen: new Date().toISOString()
-          })
+          .single()
+
+        if (existingWord) {
+          // Update existing word's total count
+          await supabase
+            .from('words')
+            .update({
+              count: existingWord.count + count,
+              last_seen: new Date().toISOString()
+            })
+            .eq('id', existingWord.id)
+          
+          wordId = existingWord.id
+        } else {
+          // Insert new word
+          const { data: newWord, error: insertError } = await supabase
+            .from('words')
+            .insert({
+              word,
+              count,
+              last_seen: new Date().toISOString()
+            })
+            .select('id')
+            .single()
+
+          if (insertError || !newWord) {
+            console.error(`❌ Error inserting word "${word}":`, insertError)
+            continue
+          }
+          
+          wordId = newWord.id
+          totalUniqueWords++
+        }
+
+        // Now handle the source-specific count
+        const { data: existingSourceWord } = await supabase
+          .from('word_sources')
+          .select('count')
+          .eq('word_id', wordId)
+          .eq('source', source)
+          .single()
+
+        if (existingSourceWord) {
+          // Update existing source word count
+          await supabase
+            .from('word_sources')
+            .update({
+              count: existingSourceWord.count + count,
+              last_seen: new Date().toISOString()
+            })
+            .eq('word_id', wordId)
+            .eq('source', source)
+        } else {
+          // Insert new source word count
+          await supabase
+            .from('word_sources')
+            .insert({
+              word_id: wordId,
+              source,
+              count,
+              last_seen: new Date().toISOString()
+            })
+        }
+
+        totalWordsProcessed += count
+        
+      } catch (error) {
+        console.error(`❌ Error processing word "${word}" from ${source}:`, error)
       }
-    } catch (error) {
-      console.error(`Error processing word "${word}":`, error)
     }
+    
+    console.log(`✅ Completed processing ${wordCounts.size} words from ${source}`)
   }
 
-  console.log(`Processed ${wordCounts.size} unique words`)
+  console.log(`🎉 Word processing complete:`)
+  console.log(`   📈 Total word mentions processed: ${totalWordsProcessed.toLocaleString()}`)
+  console.log(`   🆕 New unique words added: ${totalUniqueWords}`)
+  console.log(`   📊 Sources processed: ${wordCountsBySource.size}`)
 }
 
 function extractWords(text: string): string[] {

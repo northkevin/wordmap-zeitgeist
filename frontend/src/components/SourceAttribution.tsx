@@ -1,6 +1,13 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { WordData } from '../types'
+
+interface SourceStats {
+  source: string
+  unique_words: number
+  total_word_count: number
+  last_updated: string
+}
 
 interface Source {
   name: string
@@ -14,40 +21,26 @@ interface SourceAttributionProps {
   loading: boolean
 }
 
-const allSources: Omit<Source, 'wordCount'>[] = [
-  {
-    name: 'Hacker News',
-    icon: 'hn',
-    url: 'https://news.ycombinator.com'
-  },
-  {
-    name: 'TechCrunch',
-    icon: 'tc',
-    url: 'https://techcrunch.com'
-  },
-  {
-    name: 'BBC News',
-    icon: 'bbc',
-    url: 'https://bbc.com/news'
-  },
-  {
-    name: 'Wired',
-    icon: 'wired',
-    url: 'https://wired.com'
-  },
-  {
-    name: 'CNN',
-    icon: 'cnn',
-    url: 'https://cnn.com'
-  },
-  {
-    name: "O'Reilly Radar",
-    icon: 'oreilly',
-    url: 'https://www.oreilly.com/radar/'
-  }
-]
+const sourceMapping: Record<string, { icon: string; url: string }> = {
+  'Hacker News': { icon: 'hn', url: 'https://news.ycombinator.com' },
+  'TechCrunch': { icon: 'tc', url: 'https://techcrunch.com' },
+  'BBC News': { icon: 'bbc', url: 'https://bbc.com/news' },
+  'Wired': { icon: 'wired', url: 'https://wired.com' },
+  'CNN': { icon: 'cnn', url: 'https://cnn.com' },
+  'CNN Top Stories': { icon: 'cnn', url: 'https://cnn.com' },
+  'CNN World': { icon: 'cnn', url: 'https://cnn.com/world' },
+  "O'Reilly Radar": { icon: 'oreilly', url: 'https://www.oreilly.com/radar/' },
+  'The Guardian UK': { icon: 'guardian', url: 'https://theguardian.com/uk' },
+  'The Guardian World': { icon: 'guardian', url: 'https://theguardian.com/world' },
+  'The Guardian US': { icon: 'guardian', url: 'https://theguardian.com/us-news' },
+  'NPR Main News': { icon: 'npr', url: 'https://npr.org' },
+  'Reddit r/all': { icon: 'reddit', url: 'https://reddit.com/r/all' },
+  'Reddit r/popular': { icon: 'reddit', url: 'https://reddit.com/r/popular' },
+  'Reddit r/worldnews': { icon: 'reddit', url: 'https://reddit.com/r/worldnews' },
+  'Reddit Tech Combined': { icon: 'reddit', url: 'https://reddit.com/r/technology+science+programming' }
+}
 
-const SourceIcon: React.FC<{ source: Omit<Source, 'wordCount'> }> = ({ source }) => {
+const SourceIcon: React.FC<{ source: Source }> = ({ source }) => {
   const iconComponents = {
     hn: (
       <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center text-white font-bold text-sm">
@@ -78,6 +71,21 @@ const SourceIcon: React.FC<{ source: Omit<Source, 'wordCount'> }> = ({ source })
       <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xs">
         O
       </div>
+    ),
+    guardian: (
+      <div className="w-8 h-8 bg-blue-800 rounded flex items-center justify-center text-white font-bold text-xs">
+        G
+      </div>
+    ),
+    npr: (
+      <div className="w-8 h-8 bg-purple-600 rounded flex items-center justify-center text-white font-bold text-xs">
+        NPR
+      </div>
+    ),
+    reddit: (
+      <div className="w-8 h-8 bg-orange-600 rounded flex items-center justify-center text-white font-bold text-xs">
+        R
+      </div>
     )
   }
 
@@ -95,44 +103,90 @@ const formatWordCount = (count: number): string => {
 }
 
 const SourceAttribution: React.FC<SourceAttributionProps> = ({ words, loading }) => {
-  const { visibleSources, hiddenCount } = useMemo(() => {
-    if (loading || !words.length) {
-      // Show all sources with 0 count when loading or no data
-      const sources = allSources.map(source => ({ ...source, wordCount: 0 }))
-      return { visibleSources: sources.slice(0, 6), hiddenCount: 0 }
+  const [sourceStats, setSourceStats] = useState<SourceStats[]>([])
+  const [statsLoading, setStatsLoading] = useState(true)
+
+  // Fetch real source statistics from backend
+  useEffect(() => {
+    const fetchSourceStats = async () => {
+      try {
+        const response = await fetch('/api/sources')
+        if (response.ok) {
+          const data = await response.json()
+          setSourceStats(data.sources || [])
+        } else {
+          console.error('Failed to fetch source statistics:', response.status)
+        }
+      } catch (error) {
+        console.error('Failed to fetch source statistics:', error)
+      } finally {
+        setStatsLoading(false)
+      }
     }
 
-    // In a real implementation, you would need to track which words came from which sources
-    // For now, we'll simulate this by distributing word counts across sources
-    // This would be replaced with actual source tracking from your backend
-    const totalWords = words.reduce((sum, word) => sum + word.count, 0)
-    
-    // Simulate source distribution (this would come from your actual data)
-    const sourceDistribution = [
-      { source: 'Hacker News', percentage: 0.25 },
-      { source: 'TechCrunch', percentage: 0.20 },
-      { source: 'BBC News', percentage: 0.18 },
-      { source: 'Wired', percentage: 0.15 },
-      { source: 'CNN', percentage: 0.12 },
-      { source: "O'Reilly Radar", percentage: 0.10 }
-    ]
+    fetchSourceStats()
+  }, [words]) // Refetch when words change
 
-    const sourcesWithCounts = allSources.map(source => {
-      const distribution = sourceDistribution.find(d => d.source === source.name)
-      const wordCount = Math.floor(totalWords * (distribution?.percentage || 0))
-      return { ...source, wordCount }
+  const { visibleSources, hiddenCount } = useMemo(() => {
+    if (loading || statsLoading) {
+      // Show placeholder sources when loading
+      const placeholderSources = Object.entries(sourceMapping)
+        .slice(0, 8)
+        .map(([name, config]) => ({
+          name,
+          icon: config.icon,
+          url: config.url,
+          wordCount: 0
+        }))
+      return { visibleSources: placeholderSources, hiddenCount: 0 }
+    }
+
+    // Convert source stats to display format
+    const sourcesWithCounts: Source[] = sourceStats
+      .map(stat => {
+        const mapping = sourceMapping[stat.source]
+        if (!mapping) {
+          console.warn(`No mapping found for source: ${stat.source}`)
+          return null
+        }
+        
+        return {
+          name: stat.source,
+          icon: mapping.icon,
+          url: mapping.url,
+          wordCount: stat.total_word_count
+        }
+      })
+      .filter((source): source is Source => source !== null)
+
+    // Group sources by icon (combine similar sources like multiple CNN feeds)
+    const groupedSources = new Map<string, Source>()
+    
+    sourcesWithCounts.forEach(source => {
+      const existing = groupedSources.get(source.icon)
+      if (existing) {
+        // Combine word counts for sources with same icon
+        existing.wordCount += source.wordCount
+        // Use the shorter name if combining
+        if (source.name.length < existing.name.length) {
+          existing.name = source.name
+        }
+      } else {
+        groupedSources.set(source.icon, { ...source })
+      }
     })
 
     // Sort by word count (descending)
-    const sortedSources = sourcesWithCounts.sort((a, b) => b.wordCount - a.wordCount)
+    const sortedSources = Array.from(groupedSources.values())
+      .sort((a, b) => b.wordCount - a.wordCount)
 
     // Determine how many sources can fit (responsive)
-    const maxVisible = 6 // Adjust based on your design needs
+    const maxVisible = 8
     const visibleSources = sortedSources.slice(0, maxVisible)
     const hiddenCount = Math.max(0, sortedSources.length - maxVisible)
 
     return { visibleSources, hiddenCount }
-  }, [words, loading])
+  }, [sourceStats, loading, statsLoading])
 
   return (
     <motion.div
@@ -148,7 +202,7 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({ words, loading })
       <div className="flex flex-wrap justify-center items-center gap-6 max-w-5xl mx-auto">
         {visibleSources.map((source, index) => (
           <motion.a
-            key={source.name}
+            key={`${source.icon}-${source.name}`}
             href={source.url}
             target="_blank"
             rel="noopener noreferrer"
@@ -170,8 +224,8 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({ words, loading })
             <div className="relative flex flex-col items-center">
               <SourceIcon source={source} />
               
-              {/* Subtle word count below icon */}
-              {source.wordCount > 0 && !loading && (
+              {/* Word count below icon */}
+              {source.wordCount > 0 && !loading && !statsLoading && (
                 <motion.div
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -184,11 +238,11 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({ words, loading })
             </div>
             
             <span className="text-xs text-gray-500 group-hover:text-gray-300 transition-colors duration-300 font-medium text-center leading-tight max-w-[4rem] truncate">
-              {source.name}
+              {source.name.replace(/^(CNN|Reddit|The Guardian)\s*/, '').trim() || source.name}
             </span>
             
             {/* Ranking indicator for top sources */}
-            {index < 3 && source.wordCount > 0 && !loading && (
+            {index < 3 && source.wordCount > 0 && !loading && !statsLoading && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
