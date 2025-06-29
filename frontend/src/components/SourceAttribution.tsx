@@ -191,16 +191,11 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({
           return null;
         }
 
-        // Only count words that are currently displayed on the word map
-        const wordCount = words
-          .filter((w) => w.source === stat.source)
-          .reduce((sum, w) => sum + w.count, 0);
-
         return {
           name: stat.source,
           icon: mapping.icon,
           url: mapping.url,
-          wordCount, // Only word map mentions
+          wordCount: stat.total_word_count,
         };
       })
       .filter((source): source is Source => source !== null);
@@ -233,7 +228,7 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({
     const hiddenCount = Math.max(0, sortedSources.length - maxVisible);
 
     return { visibleSources, hiddenCount };
-  }, [sourceStats, loading, statsLoading, words]);
+  }, [sourceStats, loading, statsLoading]);
 
   return (
     <motion.div
