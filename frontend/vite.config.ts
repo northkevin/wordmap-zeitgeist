@@ -23,4 +23,12 @@ export default defineConfig({
       },
     },
   },
+  // Ensure consistent behavior regardless of NODE_ENV
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+  },
+  // Optimize deps to avoid issues with production builds
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'framer-motion', 'lucide-react'],
+  },
 })
