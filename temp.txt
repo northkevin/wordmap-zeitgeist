@@ -1,0 +1,4 @@
+
+
+curl -X POST http://localhost:3001/api/scrape \
+  -H "Authorization: Bearer ddc5de741003672ea4665560d2d68cf8fb6a979fcd8f3d74e4dda01bcf81c863"
