@@ -80,7 +80,11 @@ function App() {
 
           <Stats words={words} loading={loading} />
 
-          <SourceAttribution words={words} loading={loading} />
+          <SourceAttribution
+            words={words}
+            loading={loading}
+            timeRange={timeRange}
+          />
 
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

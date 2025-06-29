@@ -325,10 +325,22 @@ app.get("/api/words", async (req, res) => {
 app.get("/api/sources", async (req, res) => {
   console.log("Source statistics endpoint requested");
   try {
-    const { data: sources, error } = await supabase
+    const timeRange = req.query.timeRange as string;
+    let query = supabase
       .from("source_stats")
       .select("*")
       .order("total_word_count", { ascending: false });
+
+    // Apply time filtering if specified
+    if (timeRange === "24h") {
+      const twentyFourHoursAgo = new Date();
+      twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+      query = query.gte("last_updated", twentyFourHoursAgo.toISOString());
+    }
+    // For "all" timeRange, no additional filtering needed
+
+    const { data: sources, error } = await query;
 
     if (error) {
       console.error("Database error fetching sources:", error);
@@ -338,7 +350,9 @@ app.get("/api/sources", async (req, res) => {
     }
 
     console.log(
-      `Successfully fetched statistics for ${sources?.length || 0} sources`
+      `Successfully fetched statistics for ${sources?.length || 0} sources${
+        timeRange ? ` (${timeRange})` : ""
+      }`
     );
     res.json({ sources: sources || [] });
   } catch (error) {
