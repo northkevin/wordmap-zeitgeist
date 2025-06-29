@@ -144,11 +144,16 @@ abstract class ApiSource {
       
       console.log(`🌐 ${this.config.name}: Fetching ${endpoint}`)
       
+      // Create AbortController for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+      
       const response = await fetch(url, {
         headers,
-        timeout: 30000 // 30 second timeout
+        signal: controller.signal
       })
 
+      clearTimeout(timeoutId)
       const responseTime = Date.now() - startTime
       
       if (!response.ok) {
