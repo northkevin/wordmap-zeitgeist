@@ -11,7 +11,7 @@ services:
         fromDatabase:
           name: wordmap-zeitgeist-db
           property: connectionString
-      - key: SUPABASE_ANON_KEY
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: SCRAPE_SECRET
         generateValue: true
