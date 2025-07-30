@@ -18,6 +18,8 @@ export interface SystemHealth {
   resources?: {
     database?: {
       posts?: number;
+      words?: number;
+      sources?: number;
     };
   };
 }

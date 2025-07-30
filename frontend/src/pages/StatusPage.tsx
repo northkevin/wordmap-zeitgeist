@@ -135,6 +135,18 @@ function StatusPage() {
                           {systemHealth.resources?.database?.posts?.toLocaleString() || "0"}
                         </p>
                       </div>
+                      <div>
+                        <p className="text-gray-400 text-sm">Total Words</p>
+                        <p className="text-lg font-medium">
+                          {systemHealth.resources?.database?.words?.toLocaleString() || "0"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-sm">Total Sources</p>
+                        <p className="text-lg font-medium">
+                          {systemHealth.resources?.database?.sources?.toLocaleString() || "0"}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </motion.section>

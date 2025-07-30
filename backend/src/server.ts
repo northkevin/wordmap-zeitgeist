@@ -369,48 +369,56 @@ app.get("/api/words", async (_req, res) => {
         }));
       }
     } else {
-      // Query for all time - use the aggregated words table for main data, then get source breakdown
-      const [wordsResult, sourceBreakdownResult] = await Promise.all([
-        supabase
-          .from("words")
-          .select("*")
-          .order("count", { ascending: false })
-          .limit(limit),
-        supabase
-          .from("word_sources")
-          .select("word_id, count, source")
-      ]);
+      // Query for all time - optimized approach
+      const wordsResult = await supabase
+        .from("words")
+        .select("*")
+        .order("count", { ascending: false })
+        .limit(limit);
 
       if (wordsResult.error) {
         error = wordsResult.error;
-      } else if (sourceBreakdownResult.error) {
-        error = sourceBreakdownResult.error;
       } else {
-        // Create a map of word_id to source breakdown
-        const sourceMap = new Map<string, Array<{ source: string; count: number }>>();
-        sourceBreakdownResult.data?.forEach((ws) => {
-          if (!sourceMap.has(ws.word_id)) {
-            sourceMap.set(ws.word_id, []);
-          }
-          sourceMap.get(ws.word_id)!.push({ source: ws.source, count: ws.count });
-        });
+        // Get source breakdown only for the top words we're actually returning
+        const wordIds = wordsResult.data?.map(w => w.id) || [];
         
-        // Transform to match WordWithSource type with source information
-        words = (wordsResult.data || []).map((w: any) => {
-          const sources = sourceMap.get(w.id) || [];
-          return {
-            word_id: w.id,
-            count: w.count,
-            last_seen: w.last_seen,
-            source: sources[0]?.source || 'aggregated',
-            sources: sources,
-            sourceCount: sources.length,
-            words: {
-              word: w.word,
-              id: w.id
+        let sourceBreakdownResult: { data: any[] | null, error: any } = { data: null, error: null };
+        if (wordIds.length > 0) {
+          sourceBreakdownResult = await supabase
+            .from("word_sources")
+            .select("word_id, count, source")
+            .in("word_id", wordIds);
+        }
+
+        if (sourceBreakdownResult.error) {
+          error = sourceBreakdownResult.error;
+        } else {
+          // Create a map of word_id to source breakdown (much smaller dataset now)
+          const sourceMap = new Map<string, Array<{ source: string; count: number }>>();
+          sourceBreakdownResult.data?.forEach((ws) => {
+            if (!sourceMap.has(ws.word_id)) {
+              sourceMap.set(ws.word_id, []);
             }
-          };
-        });
+            sourceMap.get(ws.word_id)!.push({ source: ws.source, count: ws.count });
+          });
+          
+          // Transform to match WordWithSource type with source information
+          words = (wordsResult.data || []).map((w: any) => {
+            const sources = sourceMap.get(w.id) || [];
+            return {
+              word_id: w.id,
+              count: w.count,
+              last_seen: w.last_seen,
+              source: sources[0]?.source || 'aggregated',
+              sources: sources,
+              sourceCount: sources.length,
+              words: {
+                word: w.word,
+                id: w.id
+              }
+            };
+          });
+        }
       }
     }
 

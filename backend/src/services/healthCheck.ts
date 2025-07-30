@@ -118,23 +118,29 @@ async function checkSupabaseHealth(supabase: SupabaseClient): Promise<SystemHeal
 
 async function getDatabaseStats(supabase: SupabaseClient): Promise<SystemHealth['resources']['database']> {
   try {
-    const [postsResult, wordsResult, unprocessedResult] = await Promise.all([
+    const [postsResult, wordsResult, unprocessedResult, sourcesResult] = await Promise.all([
       supabase.from('posts').select('count', { count: 'exact', head: true }),
       supabase.from('words').select('count', { count: 'exact', head: true }),
-      supabase.from('posts').select('count', { count: 'exact', head: true }).eq('processed', false)
+      supabase.from('posts').select('count', { count: 'exact', head: true }).eq('processed', false),
+      supabase.from('posts').select('source').then(result => ({ 
+        data: result.data ? [...new Set(result.data.map(p => p.source))].length : 0, 
+        error: result.error 
+      }))
     ])
     
     return {
       posts: postsResult.count || 0,
       words: wordsResult.count || 0,
-      unprocessedPosts: unprocessedResult.count || 0
+      unprocessedPosts: unprocessedResult.count || 0,
+      sources: sourcesResult.data || 0
     }
   } catch (error) {
     console.error('Failed to get database stats:', error)
     return {
       posts: 0,
       words: 0,
-      unprocessedPosts: 0
+      unprocessedPosts: 0,
+      sources: 0
     }
   }
 }

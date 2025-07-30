@@ -43,6 +43,7 @@ export interface SystemHealth {
       posts: number
       words: number
       unprocessedPosts: number
+      sources: number
     }
     apiKeys: {
       youtube: boolean
