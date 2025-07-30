@@ -24,6 +24,11 @@ build/
 supabase-type-generation-plan.md
 backend-functional-refactor-plan.md
 
+# Diagnostics and internal documentation
+diagnostics/
+IMMEDIATE_ACTIONS.md
+dev-scripts.md
+
 # IDE
 .vscode/
 .idea/
