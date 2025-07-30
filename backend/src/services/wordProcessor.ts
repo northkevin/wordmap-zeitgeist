@@ -206,7 +206,7 @@ async function processWordsFromPosts(
 
   // Phase 2: Get all unique words across all sources
   const allUniqueWords = new Set<string>();
-  for (const [source, wordCounts] of wordCountsBySource) {
+  for (const [, wordCounts] of wordCountsBySource) {
     for (const [word] of wordCounts) {
       allUniqueWords.add(word);
     }
@@ -434,7 +434,7 @@ async function getTotalWordCount(supabase: SupabaseClient): Promise<number> {
 
 function extractWords(text: string): string[] {
   // Store original for debugging
-  const originalText = text;
+  // const originalText = text;
 
   // Remove URLs using imported patterns
   URL_PATTERNS.forEach((pattern) => {

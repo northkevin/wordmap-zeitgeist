@@ -1,5 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js'
-import type { ApiManager } from './apiManager.js'
+// import type { ApiManager } from './apiManager.js'
 import * as os from 'os'
 import * as fs from 'fs/promises'
 import { execSync } from 'child_process'
@@ -135,7 +135,9 @@ async function getVersions(): Promise<SystemHealth['version']> {
     try {
       const frontendPackage = await fs.readFile('../frontend/package.json', 'utf8')
       frontendVersion = JSON.parse(frontendPackage).version
-    } catch {}
+    } catch {
+      // Frontend package.json not found
+    }
     
     const git = await getGitInfo()
     
@@ -367,7 +369,7 @@ async function getSourceHealthData(supabase: SupabaseClient, apiManager?: any): 
       'Reddit r/worldnews', 'Reddit Tech Combined'
     ]
     
-    const apiSources = ['YouTube', 'Twitter', 'NewsAPI', 'Reddit']
+    // const apiSources = ['YouTube', 'Twitter', 'NewsAPI', 'Reddit']
     
     // Build health status for each source
     for (const source of rssSources) {

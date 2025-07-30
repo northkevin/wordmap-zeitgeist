@@ -1,7 +1,7 @@
 import { ApiSource } from '../apiManager.js'
 
 export class NewsApiSource extends ApiSource {
-  protected async parseResponse(data: any, endpoint: string, params: Record<string, any>): Promise<any> {
+  protected async parseResponse(data: any, _endpoint: string, _params: Record<string, any>): Promise<any> {
     return {
       articles: data.articles?.map((article: any) => ({
         title: article.title,

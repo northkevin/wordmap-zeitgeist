@@ -1,7 +1,7 @@
 import { ApiSource } from '../apiManager.js'
 
 export class YouTubeApiSource extends ApiSource {
-  protected async parseResponse(data: any, endpoint: string, params: Record<string, any>): Promise<any> {
+  protected async parseResponse(data: any, _endpoint: string, _params: Record<string, any>): Promise<any> {
     if (endpoint.includes('search')) {
       return {
         videos: data.items?.map((item: any) => ({

@@ -103,7 +103,7 @@ export class RedditApiSource extends ApiSource {
     }
   }
 
-  protected async parseResponse(data: any, endpoint: string, params: Record<string, any>): Promise<any> {
+  protected async parseResponse(data: any, _endpoint: string, _params: Record<string, any>): Promise<any> {
     if (data.data?.children) {
       return {
         posts: data.data.children.map((child: any) => ({

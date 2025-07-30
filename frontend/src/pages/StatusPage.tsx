@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Header from "../components/Header";
 import ParticleBackground from "../components/ParticleBackground";
+import { SystemHealth, ScraperHealth } from "../types/health";
 
 function StatusPage() {
-  const [systemHealth, setSystemHealth] = useState<any>(null);
-  const [scraperHealth, setScraperHealth] = useState<any>(null);
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
+  const [scraperHealth, setScraperHealth] = useState<ScraperHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -152,7 +153,7 @@ function StatusPage() {
                     <h3 className="text-lg font-medium mb-3 text-gray-300">RSS Feeds</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {Object.entries(scraperHealth.sources?.rss || {}).map(
-                        ([source, health]: [string, any]) => (
+                        ([source, health]) => (
                           <div
                             key={source}
                             className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700"
@@ -190,7 +191,7 @@ function StatusPage() {
                     <h3 className="text-lg font-medium mb-3 text-gray-300">API Sources</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {Object.entries(scraperHealth.sources?.api || {}).map(
-                        ([source, health]: [string, any]) => (
+                        ([source, health]) => (
                           <div
                             key={source}
                             className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700"

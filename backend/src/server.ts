@@ -30,7 +30,7 @@ async function validateDatabase() {
 
   try {
     // Test basic connection
-    const { data: connectionTest, error: connectionError } = await supabase
+    const { error: connectionError } = await supabase
       .from("words")
       .select("count(*)")
       .limit(1);
@@ -78,7 +78,7 @@ async function validateDatabase() {
 
     // Check for processed column in posts table
     try {
-      const { data: processedCheck, error: processedError } = await supabase
+      const { error: processedError } = await supabase
         .from("posts")
         .select("processed")
         .limit(1);
@@ -593,7 +593,7 @@ app.use(
     err: any,
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction
+    _next: express.NextFunction
   ) => {
     console.error("Unhandled error:", err);
     res.status(500).json({ error: "Internal server error" });
