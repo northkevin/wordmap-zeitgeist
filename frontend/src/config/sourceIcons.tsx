@@ -31,15 +31,15 @@ export const sourceIcons: Record<string, SourceIconConfig> = {
   // "CNN Top Stories": { icon: <SiCnn />, color: "#CC0000" },
   // "CNN World": { icon: <SiCnn />, color: "#CC0000" },
 
-  // Guardian sources
-  "The Guardian UK": { icon: <SiTheguardian />, color: "#052962" },
-  "The Guardian World": { icon: <SiTheguardian />, color: "#052962" },
-  "The Guardian US": { icon: <SiTheguardian />, color: "#052962" },
+  // Guardian sources - using white/light color for dark backgrounds per 2018+ brand guidelines
+  "The Guardian UK": { icon: <SiTheguardian />, color: "#FFFFFF" },
+  "The Guardian World": { icon: <SiTheguardian />, color: "#FFFFFF" },
+  "The Guardian US": { icon: <SiTheguardian />, color: "#FFFFFF" },
 
   // Tech sources
   TechCrunch: { icon: <SiTechcrunch />, color: "#0A9E01" },
   "Hacker News": { icon: <FaRss />, color: "#FF6600", fallbackLetter: "HN" },
-  Wired: { icon: <RiNewspaperLine />, color: "#000000", fallbackLetter: "W" },
+  Wired: { icon: <RiNewspaperLine />, color: "#FFFFFF", fallbackLetter: "W" },
   // "O'Reilly Radar": { icon: <SiOreilly />, color: "#D3002D" }, // Feed discontinued
 
   // News sources
@@ -48,7 +48,7 @@ export const sourceIcons: Record<string, SourceIconConfig> = {
 
   // API sources
   YouTube: { icon: <SiYoutube />, color: "#FF0000" },
-  Twitter: { icon: <SiX />, color: "#000000" },
+  Twitter: { icon: <SiX />, color: "#FFFFFF" },
   NewsAPI: { icon: <FaNewspaper />, color: "#4A90E2", fallbackLetter: "API" },
 };
 

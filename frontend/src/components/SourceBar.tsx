@@ -21,29 +21,8 @@ const formatWordCount = (count: number): string => {
 };
 
 const getSourceLabel = (name: string): string => {
-  // Create short labels for sources
-  const labelMap: Record<string, string> = {
-    "Reddit r/all": "r/all",
-    "Reddit r/popular": "r/pop",
-    "Reddit r/worldnews": "r/news",
-    "Reddit Tech Combined": "r/tech",
-    // CNN sources removed - stale feeds
-    "The Guardian UK": "Guard",
-    "The Guardian World": "Guard",
-    "The Guardian US": "Guard",
-    "Hacker News": "HN",
-    "BBC News": "BBC",
-    "NPR Main News": "NPR",
-    // "O'Reilly Radar": "O'R", // Feed discontinued
-    TechCrunch: "TC",
-    Wired: "Wired",
-    YouTube: "YT",
-    Twitter: "X",
-    NewsAPI: "News",
-    Reddit: "Reddit",
-  };
-  
-  return labelMap[name] || name.substring(0, 5);
+  // Return full source name, will be truncated by CSS if needed
+  return name;
 };
 
 const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
@@ -105,7 +84,7 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
               <span className="text-gray-400 text-xs font-medium">
                 {formatWordCount(source.wordCount)}
               </span>
-              <span className="text-gray-500 text-[10px] mt-0.5 truncate max-w-[50px]">
+              <span className="text-gray-500 text-[10px] mt-0.5 truncate max-w-[80px] text-center">
                 {getSourceLabel(source.name)}
               </span>
             </motion.div>
