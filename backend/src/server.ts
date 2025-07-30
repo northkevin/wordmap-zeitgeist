@@ -33,8 +33,7 @@ async function validateDatabase() {
     // Test basic connection
     const { error: connectionError } = await supabase
       .from("words")
-      .select("count(*)")
-      .limit(1);
+      .select("*", { count: "exact", head: true });
 
     if (connectionError) {
       console.error("❌ Database connection failed:", connectionError.message);
