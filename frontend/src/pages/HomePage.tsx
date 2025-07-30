@@ -87,6 +87,16 @@ function HomePage() {
           /> */}
 
           <div className="mb-12">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="text-center mb-4"
+            >
+              <p className="text-gray-500 text-sm font-medium">
+                Word mentions by source
+              </p>
+            </motion.div>
             <SourceBar
               words={words.slice(0, 50)}
               loading={loading}

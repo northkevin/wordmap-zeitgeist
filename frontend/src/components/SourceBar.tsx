@@ -20,6 +20,13 @@ const formatWordCount = (count: number): string => {
   return count.toString();
 };
 
+const formatWordCountWithUnit = (count: number): string => {
+  const formatted = formatWordCount(count);
+  // Add subtle unit for larger numbers to provide context
+  if (count >= 100) return `${formatted} words`;
+  return formatted;
+};
+
 const getSourceLabel = (name: string): string => {
   // Return full source name, will be truncated by CSS if needed
   return name;
@@ -136,7 +143,10 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">All Sources</h3>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">All Sources</h3>
+                  <p className="text-gray-400 text-xs mt-1">Total word mentions from each source</p>
+                </div>
                 <button
                   onClick={() => setShowModal(false)}
                   className="text-gray-400 hover:text-white transition-colors"
@@ -168,7 +178,7 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
                       </span>
                     </div>
                     <span className="text-gray-400 text-sm font-medium">
-                      {formatWordCount(source.wordCount)}
+                      {formatWordCountWithUnit(source.wordCount)}
                     </span>
                   </motion.div>
                 ))}
