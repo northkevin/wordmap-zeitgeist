@@ -395,6 +395,8 @@ app.get("/api/words", async (_req, res) => {
       }
     } else {
       // Query for all time - use same aggregation approach as 24h for consistency
+      console.log(`📊 Fetching ALL TIME data...`);
+      
       const { data, error: queryError } = await supabase
         .from("word_sources")
         .select(
@@ -405,7 +407,15 @@ app.get("/api/words", async (_req, res) => {
           source,
           words!inner(word, id)
         `
-        );
+        )
+        .order("count", { ascending: false })
+        .limit(5000); // Limit to top 5000 records to avoid memory issues
+        
+      console.log(`📊 All time query returned ${data?.length || 0} word-source records`);
+      
+      // Debug: Check for API sources in all time data
+      const apiRecords = data?.filter(ws => ['YouTube', 'NewsAPI', 'Twitter'].includes(ws.source)) || [];
+      console.log(`🔍 API records in all time data: ${apiRecords.length} (YouTube: ${apiRecords.filter(r => r.source === 'YouTube').length}, NewsAPI: ${apiRecords.filter(r => r.source === 'NewsAPI').length}, Twitter: ${apiRecords.filter(r => r.source === 'Twitter').length})`);
 
       if (queryError) {
         error = queryError;
