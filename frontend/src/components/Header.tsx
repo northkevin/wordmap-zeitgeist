@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { RefreshCw, Clock, Globe } from "lucide-react";
+import { RefreshCw, Clock, Globe, Activity } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
 interface HeaderProps {
   onRefresh: () => void;
@@ -8,6 +9,9 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onRefresh, lastUpdated }) => {
+  const location = useLocation();
+  const isStatusPage = location.pathname === "/status";
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -38,6 +42,24 @@ const Header: React.FC<HeaderProps> = ({ onRefresh, lastUpdated }) => {
                   Updated: {formatTime(lastUpdated)}
                 </span>
               </div>
+            )}
+
+            {isStatusPage ? (
+              <Link
+                to="/"
+                className="flex items-center space-x-2 px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <Globe className="w-3 h-3" />
+                <span className="text-xs">Back to Map</span>
+              </Link>
+            ) : (
+              <Link
+                to="/status"
+                className="flex items-center space-x-2 px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <Activity className="w-3 h-3" />
+                <span className="text-xs">Status</span>
+              </Link>
             )}
 
             <motion.button

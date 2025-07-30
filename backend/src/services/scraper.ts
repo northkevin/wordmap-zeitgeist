@@ -47,7 +47,7 @@ const RETRY_DELAY = 5000 // 5 seconds
 const RATE_LIMIT_DELAY = 2000 // 2 seconds between sources
 const REQUEST_TIMEOUT = 30000 // 30 seconds
 
-export async function scrapeRSSFeeds(): Promise<Post[]> {
+export async function scrapeRSSFeeds(supabase?: any): Promise<Post[]> {
   const posts: Post[] = []
   const failedFeeds: string[] = []
   
@@ -55,14 +55,25 @@ export async function scrapeRSSFeeds(): Promise<Post[]> {
   
   for (let i = 0; i < RSS_FEEDS.length; i++) {
     const feed = RSS_FEEDS[i]
+    let runId: string | null = null
     
     try {
       console.log(`📡 [${i + 1}/${RSS_FEEDS.length}] Scraping ${feed.source}...`)
+      
+      // Log scrape start if supabase is provided
+      if (supabase) {
+        runId = await logScrapeStart(feed.source, supabase)
+      }
       
       const feedPosts = await scrapeFeedWithRetry(feed)
       posts.push(...feedPosts)
       
       console.log(`✅ ${feed.source}: ${feedPosts.length} posts scraped`)
+      
+      // Log successful completion
+      if (supabase && runId) {
+        await logScrapeComplete(runId, feedPosts.length, null, supabase)
+      }
       
       // Staggered rate limiting (2s between sources)
       if (i < RSS_FEEDS.length - 1) {
@@ -71,8 +82,14 @@ export async function scrapeRSSFeeds(): Promise<Post[]> {
       }
       
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       console.error(`❌ Failed to scrape ${feed.source} after ${MAX_RETRIES} retries:`, error)
       failedFeeds.push(feed.source)
+      
+      // Log failed completion
+      if (supabase && runId) {
+        await logScrapeComplete(runId, 0, errorMessage, supabase)
+      }
     }
   }
   
@@ -350,3 +367,58 @@ function cleanText(text: string): string {
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
+
+// Helper functions for scrape run tracking
+async function logScrapeStart(source: string, supabase: any): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('scrape_runs')
+      .insert({ 
+        source, 
+        status: 'running',
+        started_at: new Date().toISOString()
+      })
+      .select('id')
+      .single()
+    
+    if (error) {
+      console.error(`Failed to log scrape start for ${source}:`, error)
+      return null
+    }
+    
+    return data?.id
+  } catch (error) {
+    console.error(`Error logging scrape start for ${source}:`, error)
+    return null
+  }
+}
+
+async function logScrapeComplete(
+  runId: string | null, 
+  postsFound: number, 
+  error: string | null = null,
+  supabase: any
+): Promise<void> {
+  if (!runId) return
+  
+  try {
+    const { error: updateError } = await supabase
+      .from('scrape_runs')
+      .update({
+        completed_at: new Date().toISOString(),
+        status: error ? 'failed' : 'success',
+        posts_found: postsFound,
+        error_message: error
+      })
+      .eq('id', runId)
+    
+    if (updateError) {
+      console.error(`Failed to log scrape completion:`, updateError)
+    }
+  } catch (err) {
+    console.error(`Error logging scrape completion:`, err)
+  }
+}
+
+// Export helper functions for use in other scrapers
+export { logScrapeStart, logScrapeComplete }

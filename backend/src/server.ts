@@ -4,7 +4,7 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import cron from "node-cron";
 import { createClient } from "@supabase/supabase-js";
-import { scrapeRSSFeeds } from "./services/scraper.js";
+import { scrapeRSSFeeds, logScrapeStart, logScrapeComplete } from "./services/scraper.js";
 import {
   processWords,
   reprocessOrphanedPosts,
@@ -454,6 +454,10 @@ app.post("/api/manager/scrape", async (req, res) => {
     }
 
     console.log(`Starting API scrape: ${source}/${endpoint}`);
+    
+    // Log scrape start
+    const runId = await logScrapeStart(source, supabase);
+    
     const result = await apiManager.scrapeApi(source, endpoint, params || {});
 
     let postsProcessed = 0;
@@ -473,6 +477,12 @@ app.post("/api/manager/scrape", async (req, res) => {
         wordsProcessed = true;
         console.log(`Processed ${posts.length} posts from ${result.source}`);
       }
+      
+      // Log successful completion
+      await logScrapeComplete(runId, posts.length, null, supabase);
+    } else {
+      // Log failed completion
+      await logScrapeComplete(runId, 0, result.error || 'Unknown error', supabase);
     }
 
     res.json({
@@ -507,7 +517,7 @@ app.post("/api/scrape", async (req, res) => {
     }
 
     console.log(`[${timestamp}] Starting RSS scraping...`);
-    const posts = await scrapeRSSFeeds();
+    const posts = await scrapeRSSFeeds(supabase);
     console.log(`[${timestamp}] Scraped ${posts.length} posts`);
 
     if (posts.length > 0) {
