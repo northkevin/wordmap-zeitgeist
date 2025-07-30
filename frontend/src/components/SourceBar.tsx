@@ -39,7 +39,13 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
   const sourceCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     words.forEach((w) => {
-      if (w.source) {
+      // Aggregate counts from all sources for each word
+      if (w.sources && w.sources.length > 0) {
+        w.sources.forEach((sourceInfo) => {
+          counts[sourceInfo.source] = (counts[sourceInfo.source] || 0) + sourceInfo.count;
+        });
+      } else if (w.source) {
+        // Fallback to single source field if sources array not available
         counts[w.source] = (counts[w.source] || 0) + w.count;
       }
     });
