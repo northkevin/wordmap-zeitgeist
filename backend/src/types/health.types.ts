@@ -58,10 +58,11 @@ export interface SystemHealth {
 }
 
 export interface SourceHealth {
-  status: 'healthy' | 'degraded' | 'unhealthy'
+  status: 'healthy' | 'degraded' | 'unhealthy' | 'disabled'
   lastSuccess: string | null
   postsLast24h: number
   postsLastHour: number
+  enabled?: boolean
   errorCount?: number
   lastError?: string
   rateLimit?: {

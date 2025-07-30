@@ -5,6 +5,7 @@ import {
   ScraperHealth, 
   SourceHealth
 } from '../types/health.types.js'
+import { RSS_SOURCES, API_SOURCES, getEnabledRSSSources, getEnabledAPISources } from '../config/dataSources.js'
 import * as os from 'os'
 import * as fs from 'fs/promises'
 import { execSync } from 'child_process'
@@ -291,63 +292,62 @@ async function getSourceHealthData(
     const rssHealth: Record<string, SourceHealth> = {}
     const apiHealth: Record<string, SourceHealth> = {}
     
-    // Define known sources
-    const rssSources = [
-      'TechCrunch', 'Wired', 'BBC News', 'Hacker News',
-      'The Guardian UK', 'The Guardian World', 'The Guardian US',
-      'NPR Main News', 'Reddit r/all', 'Reddit r/popular',
-      'Reddit r/worldnews', 'Reddit Tech Combined'
-    ]
+    // Get enabled/disabled sources from configuration
+    const enabledRSSSources = getEnabledRSSSources().map(s => s.name)
+    const enabledAPISources = getEnabledAPISources().map(s => s.name)
+    const allRSSSources = RSS_SOURCES.map(s => s.name)
+    const allAPISources = API_SOURCES.map(s => s.name)
     
-    // const apiSources = ['YouTube', 'Twitter', 'NewsAPI', 'Reddit']
-    
-    // Build health status for each source
-    for (const source of rssSources) {
+    // Build health status for each RSS source
+    for (const source of allRSSSources) {
       const stats = sourceMap.get(source)
+      const isEnabled = enabledRSSSources.includes(source)
+      
       rssHealth[source] = {
-        status: stats && stats.postsLastHour > 0 ? 'healthy' : 
+        status: !isEnabled ? 'disabled' :
+                stats && stats.postsLastHour > 0 ? 'healthy' : 
                 stats && stats.postsLast24h > 0 ? 'degraded' : 'unhealthy',
         lastSuccess: stats?.lastSuccess || null,
         postsLast24h: stats?.postsLast24h || 0,
-        postsLastHour: stats?.postsLastHour || 0
+        postsLastHour: stats?.postsLastHour || 0,
+        enabled: isEnabled
       }
     }
     
-    // Get API-specific health data if apiManager is available
+    // Build health status for all API sources (both enabled and disabled)
+    for (const source of allAPISources) {
+      const stats = sourceMap.get(source)
+      const isEnabled = enabledAPISources.includes(source)
+      
+      apiHealth[source] = {
+        status: !isEnabled ? 'disabled' :
+                stats && stats.postsLastHour > 0 ? 'healthy' : 
+                stats && stats.postsLast24h > 0 ? 'degraded' : 'unhealthy',
+        lastSuccess: stats?.lastSuccess || null,
+        postsLast24h: stats?.postsLast24h || 0,
+        postsLastHour: stats?.postsLastHour || 0,
+        enabled: isEnabled
+      }
+    }
+    
+    // Enhance with rate limit info if apiManager is available
     if (apiManager && apiManager.getAllSources) {
       const apiSourcesData = apiManager.getAllSources()
       for (const sourceId of apiSourcesData) {
         const sourceInfo = apiManager.getSourceInfo(sourceId)
         if (sourceInfo) {
           const sourceName = sourceInfo.config.name
-          const stats = sourceMap.get(sourceName)
           
-          apiHealth[sourceName] = {
-            status: stats && stats.postsLastHour > 0 ? 'healthy' : 
-                    stats && stats.postsLast24h > 0 ? 'degraded' : 'unhealthy',
-            lastSuccess: stats?.lastSuccess || null,
-            postsLast24h: stats?.postsLast24h || 0,
-            postsLastHour: stats?.postsLastHour || 0,
-            rateLimit: {
-              remaining: sourceInfo.rateLimit.remainingRequests || 0,
-              perHour: sourceInfo.config.rateLimit.perHour,
-              resetAt: sourceInfo.rateLimit.hourlyResetTime?.toISOString() || new Date(Date.now() + 3600000).toISOString()
+          // Only update if we have this source in our health data
+          if (apiHealth[sourceName]) {
+            apiHealth[sourceName] = {
+              ...apiHealth[sourceName],
+              rateLimit: {
+                remaining: sourceInfo.rateLimit.remainingRequests || 0,
+                perHour: sourceInfo.config.rateLimit.perHour,
+                resetAt: sourceInfo.rateLimit.hourlyResetTime?.toISOString() || new Date(Date.now() + 3600000).toISOString()
+              }
             }
-          }
-        }
-      }
-    } else {
-      // If apiManager not available, just check for known API sources in the data
-      const apiSources = ['YouTube', 'Twitter', 'NewsAPI', 'Reddit']
-      for (const source of apiSources) {
-        const stats = sourceMap.get(source)
-        if (stats) {
-          apiHealth[source] = {
-            status: stats.postsLastHour > 0 ? 'healthy' : 
-                    stats.postsLast24h > 0 ? 'degraded' : 'unhealthy',
-            lastSuccess: stats?.lastSuccess || null,
-            postsLast24h: stats.postsLast24h || 0,
-            postsLastHour: stats.postsLastHour || 0
           }
         }
       }

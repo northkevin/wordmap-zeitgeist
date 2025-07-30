@@ -5,6 +5,7 @@ import {
   TwitterResponse, 
   RedditResponse 
 } from '../types/api.types.js'
+import { getEnabledAPISources, logDataSourceStatus } from '../config/dataSources.js'
 
 // Re-export types for backward compatibility
 export type { ApiConfig, ApiResponse, RequestLog } from './ApiSource.js'
@@ -23,88 +24,104 @@ const sources = new Map<string, ApiSourceTypes>()
 const requestLogs: RequestLog[] = []
 const MAX_LOGS = 1000
 
-// Initialize default sources
+// Initialize sources based on configuration
 function initializeDefaultSources() {
-  // YouTube Data API v3
-  if (process.env.YOUTUBE_API_KEY) {
-    const youtubeConfig: ApiConfig = {
-      name: 'YouTube',
-      baseUrl: 'https://www.googleapis.com/youtube/v3/',
-      authType: 'query',
-      keyParam: 'key',
-      rateLimit: {
-        perHour: 400, // 10k quota units per day, roughly 400 per hour (conservative estimate)
-        delay: 1000 // 1 second between requests
-      }
-    }
-    
-    sources.set('youtube', new YouTubeApiSource(youtubeConfig, process.env.YOUTUBE_API_KEY))
-    console.log('✅ YouTube API source initialized')
-  } else {
-    console.log('⚠️  YouTube API key not found - skipping initialization')
-  }
+  const enabledAPISources = getEnabledAPISources()
+  
+  // Log source status for debugging
+  logDataSourceStatus()
+  
+  enabledAPISources.forEach(sourceConfig => {
+    try {
+      switch (sourceConfig.sourceId) {
+        case 'youtube':
+          if (process.env.YOUTUBE_API_KEY) {
+            const youtubeConfig: ApiConfig = {
+              name: 'YouTube',
+              baseUrl: 'https://www.googleapis.com/youtube/v3/',
+              authType: 'query',
+              keyParam: 'key',
+              rateLimit: {
+                perHour: 400,
+                delay: 1000
+              }
+            }
+            sources.set('youtube', new YouTubeApiSource(youtubeConfig, process.env.YOUTUBE_API_KEY))
+            console.log('✅ YouTube API source initialized')
+          } else {
+            console.log('⚠️  YouTube API key not found - skipping YouTube (enabled in config)')
+          }
+          break
 
-  // NewsAPI.org
-  if (process.env.NEWSAPI_KEY) {
-    const newsApiConfig: ApiConfig = {
-      name: 'NewsAPI',
-      baseUrl: 'https://newsapi.org/v2/',
-      authType: 'header',
-      headerName: 'X-API-Key',
-      rateLimit: {
-        perHour: 42, // 1000 requests per day for free tier = ~42 per hour
-        delay: 2000 // 2 seconds between requests
-      }
-    }
-    
-    sources.set('newsapi', new NewsApiSource(newsApiConfig, process.env.NEWSAPI_KEY))
-    console.log('✅ NewsAPI source initialized')
-  } else {
-    console.log('⚠️  NewsAPI key not found - skipping initialization')
-  }
+        case 'newsapi':
+          if (process.env.NEWSAPI_KEY) {
+            const newsApiConfig: ApiConfig = {
+              name: 'NewsAPI',
+              baseUrl: 'https://newsapi.org/v2/',
+              authType: 'header',
+              headerName: 'X-API-Key',
+              rateLimit: {
+                perHour: 42,
+                delay: 2000
+              }
+            }
+            sources.set('newsapi', new NewsApiSource(newsApiConfig, process.env.NEWSAPI_KEY))
+            console.log('✅ NewsAPI source initialized')
+          } else {
+            console.log('⚠️  NewsAPI key not found - skipping NewsAPI (enabled in config)')
+          }
+          break
 
-  // Reddit API
-  if (process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET) {
-    const redditConfig: ApiConfig = {
-      name: 'Reddit',
-      baseUrl: 'https://oauth.reddit.com/',
-      authType: 'oauth',
-      rateLimit: {
-        perHour: 600, // 60 requests per minute = 3600 per hour, being conservative at 600
-        delay: 2000 // 2 seconds between requests
-      },
-      defaultHeaders: {
-        'User-Agent': 'WordmapZeitgeist/1.0'
-      }
-    }
-    
-    sources.set('reddit', new RedditApiSource(redditConfig, ''))
-    console.log('✅ Reddit API source initialized')
-  } else {
-    console.log('⚠️  Reddit API credentials not found - skipping initialization')
-  }
+        case 'reddit':
+          if (process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET) {
+            const redditConfig: ApiConfig = {
+              name: 'Reddit',
+              baseUrl: 'https://oauth.reddit.com/',
+              authType: 'oauth',
+              rateLimit: {
+                perHour: 600,
+                delay: 2000
+              },
+              defaultHeaders: {
+                'User-Agent': 'WordmapZeitgeist/1.0'
+              }
+            }
+            sources.set('reddit', new RedditApiSource(redditConfig, ''))
+            console.log('✅ Reddit API source initialized')
+          } else {
+            console.log('⚠️  Reddit API credentials not found - skipping Reddit (enabled in config)')
+          }
+          break
 
-  // Twitter API v2
-  if (process.env.TWITTER_BEARER_TOKEN) {
-    const twitterConfig: ApiConfig = {
-      name: 'Twitter',
-      baseUrl: 'https://api.twitter.com/2/',
-      authType: 'bearer',
-      rateLimit: {
-        perHour: 300, // 300 requests per 15-minute window = 1200 per hour, being conservative
-        delay: 1000 // 1 second between requests
-      },
-      defaultHeaders: {
-        'User-Agent': 'WordmapZeitgeist/1.0'
-      }
-    }
-    
-    sources.set('twitter', new TwitterApiSource(twitterConfig, process.env.TWITTER_BEARER_TOKEN))
-    console.log('✅ Twitter API source initialized')
-  } else {
-    console.log('⚠️  Twitter Bearer Token not found - skipping initialization')
-  }
+        case 'twitter':
+          if (process.env.TWITTER_BEARER_TOKEN) {
+            const twitterConfig: ApiConfig = {
+              name: 'Twitter',
+              baseUrl: 'https://api.twitter.com/2/',
+              authType: 'bearer',
+              rateLimit: {
+                perHour: 300,
+                delay: 1000
+              },
+              defaultHeaders: {
+                'User-Agent': 'WordmapZeitgeist/1.0'
+              }
+            }
+            sources.set('twitter', new TwitterApiSource(twitterConfig, process.env.TWITTER_BEARER_TOKEN))
+            console.log('✅ Twitter API source initialized')
+          } else {
+            console.log('⚠️  Twitter Bearer Token not found - skipping Twitter (enabled in config)')
+          }
+          break
 
+        default:
+          console.warn(`⚠️  Unknown API source configured: ${sourceConfig.sourceId}`)
+      }
+    } catch (error) {
+      console.error(`❌ Failed to initialize ${sourceConfig.name}:`, error)
+    }
+  })
+  
   console.log(`🔧 API Manager initialized with ${sources.size} sources`)
 }
 

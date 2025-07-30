@@ -1,3 +1,5 @@
+import { getEnabledRSSSources, logDataSourceStatus } from '../config/dataSources.js'
+
 interface RSSFeed {
   url: string
   source: string
@@ -17,31 +19,6 @@ interface ParsedFeed {
   format: 'rss' | 'atom' | 'reddit' | 'unknown'
 }
 
-const RSS_FEEDS: RSSFeed[] = [
-  // Tech feeds
-  { url: 'https://techcrunch.com/feed/', source: 'TechCrunch', type: 'rss' },
-  { url: 'https://www.wired.com/feed/rss', source: 'Wired', type: 'rss' },
-  { url: 'https://feeds.bbci.co.uk/news/rss.xml', source: 'BBC News', type: 'rss' },
-  { url: 'https://hnrss.org/frontpage', source: 'Hacker News', type: 'rss' },
-  
-  // Note: O'Reilly Radar feed discontinued (404)
-  // Note: CNN RSS feeds are stale (last updated 2023)
-  
-  // Guardian feeds
-  { url: 'https://www.theguardian.com/uk/rss', source: 'The Guardian UK', type: 'rss' },
-  { url: 'https://www.theguardian.com/world/rss', source: 'The Guardian World', type: 'rss' },
-  { url: 'https://www.theguardian.com/us-news/rss', source: 'The Guardian US', type: 'rss' },
-  
-  // NPR feed
-  { url: 'https://feeds.npr.org/1001/rss.xml', source: 'NPR Main News', type: 'rss' },
-  
-  // Reddit feeds (special handling needed)
-  { url: 'https://www.reddit.com/r/all/.rss', source: 'Reddit r/all', type: 'reddit' },
-  { url: 'https://www.reddit.com/r/popular/.rss', source: 'Reddit r/popular', type: 'reddit' },
-  { url: 'https://www.reddit.com/r/worldnews/.rss', source: 'Reddit r/worldnews', type: 'reddit' },
-  { url: 'https://www.reddit.com/r/technology+science+programming/.rss', source: 'Reddit Tech Combined', type: 'reddit' }
-]
-
 const MAX_RETRIES = 3
 const RETRY_DELAY = 5000 // 5 seconds
 const RATE_LIMIT_DELAY = 2000 // 2 seconds between sources
@@ -51,7 +28,18 @@ export async function scrapeRSSFeeds(supabase?: any): Promise<Post[]> {
   const posts: Post[] = []
   const failedFeeds: string[] = []
   
-  console.log(`🔄 Starting RSS scraping for ${RSS_FEEDS.length} sources...`)
+  // Get enabled RSS sources from configuration
+  const enabledSources = getEnabledRSSSources()
+  const RSS_FEEDS: RSSFeed[] = enabledSources.map(source => ({
+    url: source.url,
+    source: source.name,
+    type: source.feedType
+  }))
+  
+  // Log source status for debugging
+  logDataSourceStatus()
+  
+  console.log(`🔄 Starting RSS scraping for ${RSS_FEEDS.length} enabled sources...`)
   
   for (let i = 0; i < RSS_FEEDS.length; i++) {
     const feed = RSS_FEEDS[i]

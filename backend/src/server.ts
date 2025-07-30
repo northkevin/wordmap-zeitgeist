@@ -293,6 +293,8 @@ app.get("/api/words", async (_req, res) => {
       count: number
       last_seen: string | null
       source: string
+      sources?: Array<{ source: string; count: number }>
+      sourceCount?: number
       words: {
         word: string
         id: string
@@ -352,12 +354,14 @@ app.get("/api/words", async (_req, res) => {
           .sort((a, b) => b.count - a.count)
           .slice(0, limit);
         
-        // Transform to match WordWithSource type
+        // Transform to match WordWithSource type with source information
         words = aggregatedWords.map(w => ({
           word_id: w.id,
           count: w.count,
           last_seen: w.last_seen,
-          source: w.sources[0]?.source || 'unknown',
+          source: w.sources[0]?.source || 'aggregated',
+          sources: w.sources,
+          sourceCount: w.sources.length,
           words: {
             word: w.word,
             id: w.id
@@ -365,24 +369,69 @@ app.get("/api/words", async (_req, res) => {
         }));
       }
     } else {
-      // Query for all time - use the original simple approach
+      // Query for all time - also get source breakdown
       const { data, error: queryError } = await supabase
-        .from("words")
-        .select("*")
-        .order("count", { ascending: false })
-        .limit(limit);
+        .from("word_sources")
+        .select(
+          `
+          word_id,
+          count,
+          last_seen,
+          source,
+          words!inner(word, id)
+        `
+        );
 
-      // Transform to match WordWithSource type  
-      words = (data || []).map((w: any) => ({
-        word_id: w.id,
-        count: w.count,
-        last_seen: w.last_seen,
-        source: 'aggregated',
-        words: {
-          word: w.word,
-          id: w.id
+      if (queryError) {
+        error = queryError;
+      } else {
+        // Group by word and sum counts, and collect per-source counts
+        interface WordAggregateEntry {
+          id: string
+          word: string
+          count: number
+          last_seen: string | null
+          sources: Array<{ source: string; count: number }>
         }
-      }));
+        
+        const wordMap = new Map<string, WordAggregateEntry>();
+        data?.forEach((ws) => {
+          const word = ws.words;
+          if (!wordMap.has(word.id)) {
+            wordMap.set(word.id, {
+              id: word.id,
+              word: word.word,
+              count: 0,
+              last_seen: ws.last_seen,
+              sources: [],
+            });
+          }
+          const entry = wordMap.get(word.id)!;
+          entry.count += ws.count;
+          entry.sources.push({ source: ws.source, count: ws.count });
+          // Update last_seen to the most recent
+          if (!entry.last_seen || (ws.last_seen && ws.last_seen > entry.last_seen)) {
+            entry.last_seen = ws.last_seen;
+          }
+        });
+        const aggregatedWords = Array.from(wordMap.values())
+          .sort((a, b) => b.count - a.count)
+          .slice(0, limit);
+        
+        // Transform to match WordWithSource type with source information
+        words = aggregatedWords.map(w => ({
+          word_id: w.id,
+          count: w.count,
+          last_seen: w.last_seen,
+          source: w.sources[0]?.source || 'aggregated',
+          sources: w.sources,
+          sourceCount: w.sources.length,
+          words: {
+            word: w.word,
+            id: w.id
+          }
+        }));
+      }
       error = queryError;
     }
 
