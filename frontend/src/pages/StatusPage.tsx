@@ -95,18 +95,6 @@ function StatusPage() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-gray-400 text-sm">Backend Version</p>
-                        <p className="text-lg font-medium">
-                          v{systemHealth.version?.backend || "unknown"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 text-sm">Git Commit</p>
-                        <p className="text-lg font-medium font-mono">
-                          {systemHealth.version?.git?.commit || "unknown"}
-                        </p>
-                      </div>
-                      <div>
                         <p className="text-gray-400 text-sm">Uptime</p>
                         <p className="text-lg font-medium">
                           {systemHealth.system?.uptime
@@ -114,19 +102,6 @@ function StatusPage() {
                                 (systemHealth.system.uptime % 3600) / 60
                               )}m`
                             : "unknown"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 text-sm">Database</p>
-                        <p className="text-lg font-medium">
-                          <span
-                            className={`inline-block w-3 h-3 rounded-full mr-2 ${
-                              systemHealth.services?.supabase?.status === "healthy"
-                                ? "bg-green-500"
-                                : "bg-red-500"
-                            }`}
-                          />
-                          {systemHealth.services?.supabase?.status || "unknown"}
                         </p>
                       </div>
                       <div>
@@ -139,12 +114,6 @@ function StatusPage() {
                         <p className="text-gray-400 text-sm">Total Words</p>
                         <p className="text-lg font-medium">
                           {systemHealth.resources?.database?.words?.toLocaleString() || "0"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400 text-sm">Total Sources</p>
-                        <p className="text-lg font-medium">
-                          {systemHealth.resources?.database?.sources?.toLocaleString() || "0"}
                         </p>
                       </div>
                     </div>
@@ -163,7 +132,13 @@ function StatusPage() {
                   
                   {/* RSS Sources */}
                   <div className="mb-6">
-                    <h3 className="text-lg font-medium mb-3 text-gray-300">RSS Feeds</h3>
+                    <h3 className="text-lg font-medium mb-3 text-gray-300">
+                      RSS Feeds{" "}
+                      <span className="text-sm font-normal text-gray-500">
+                        ({Object.values(scraperHealth.sources?.rss || {}).filter(s => s.status !== "disabled").length}/
+                        {Object.keys(scraperHealth.sources?.rss || {}).length})
+                      </span>
+                    </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {Object.entries(scraperHealth.sources?.rss || {})
                         .sort(([, a], [, b]) => b.postsLast24h - a.postsLast24h)
@@ -217,7 +192,13 @@ function StatusPage() {
 
                   {/* API Sources */}
                   <div>
-                    <h3 className="text-lg font-medium mb-3 text-gray-300">API Sources</h3>
+                    <h3 className="text-lg font-medium mb-3 text-gray-300">
+                      API Sources{" "}
+                      <span className="text-sm font-normal text-gray-500">
+                        ({Object.values(scraperHealth.sources?.api || {}).filter(s => s.status !== "disabled").length}/
+                        {Object.keys(scraperHealth.sources?.api || {}).length})
+                      </span>
+                    </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {Object.entries(scraperHealth.sources?.api || {})
                         .sort(([, a], [, b]) => b.postsLast24h - a.postsLast24h)

@@ -19,7 +19,6 @@ export interface SystemHealth {
     database?: {
       posts?: number;
       words?: number;
-      sources?: number;
     };
   };
 }
