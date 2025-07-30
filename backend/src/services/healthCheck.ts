@@ -242,7 +242,7 @@ interface HttpError {
 
 async function getSourceHealthData(
   supabase: SupabaseClient<Database>,
-  apiManager?: { getAllSources: () => string[]; getSourceInfo: (id: string) => { config: { name: string }; rateLimit: any } | null }
+  apiManager?: { getAllSources: () => string[]; getSourceInfo: (id: string) => { config: { name: string; rateLimit: { perHour: number } }; rateLimit: any } | null }
 ): Promise<{
   rssHealth: Record<string, SourceHealth>
   apiHealth: Record<string, SourceHealth>
@@ -328,7 +328,11 @@ async function getSourceHealthData(
             lastSuccess: stats?.lastSuccess || null,
             postsLast24h: stats?.postsLast24h || 0,
             postsLastHour: stats?.postsLastHour || 0,
-            rateLimit: sourceInfo.rateLimit
+            rateLimit: {
+              remaining: sourceInfo.rateLimit.remainingRequests || 0,
+              perHour: sourceInfo.config.rateLimit.perHour,
+              resetAt: sourceInfo.rateLimit.hourlyResetTime?.toISOString() || new Date(Date.now() + 3600000).toISOString()
+            }
           }
         }
       }
@@ -362,7 +366,7 @@ async function getSourceHealthData(
 
 export async function getScraperHealth(
   supabase: SupabaseClient<Database>, 
-  apiManager?: { getAllSources: () => string[]; getSourceInfo: (id: string) => { config: { name: string }; rateLimit: any } | null }
+  apiManager?: { getAllSources: () => string[]; getSourceInfo: (id: string) => { config: { name: string; rateLimit: { perHour: number } }; rateLimit: any } | null }
 ): Promise<ScraperHealth> {
   const cached = getCached<ScraperHealth>('scraper-health')
   if (cached) return cached
