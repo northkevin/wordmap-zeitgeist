@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Header from "../components/Header";
 import ParticleBackground from "../components/ParticleBackground";
+import Footer from "../components/Footer";
 import { SystemHealth, ScraperHealth } from "../types/health";
 
 function StatusPage() {
@@ -244,6 +245,8 @@ function StatusPage() {
             </div>
           )}
         </main>
+
+        <Footer />
       </div>
     </div>
   );

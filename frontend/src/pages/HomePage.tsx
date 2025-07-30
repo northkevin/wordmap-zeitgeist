@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import SourceBar from "../components/SourceBar";
 import ParticleBackground from "../components/ParticleBackground";
 import TimeFilterToggle from "../components/TimeFilterToggle";
+import Footer from "../components/Footer";
 import { WordData } from "../types";
 
 function HomePage() {
@@ -102,6 +103,8 @@ function HomePage() {
             <WordMap words={words} loading={loading} />
           </motion.div>
         </main>
+
+        <Footer />
       </div>
     </div>
   );
