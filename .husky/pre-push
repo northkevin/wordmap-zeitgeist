@@ -2,15 +2,38 @@
 
 echo "Running pre-push checks..."
 
+# Track if any checks fail
+FAILED=0
+
 # Run frontend checks
 if [ -d "frontend" ]; then
-    echo "Running frontend type-check and lint..."
+    echo "🔍 Checking frontend..."
     cd frontend && npm run check || {
-        echo "❌ Frontend checks failed! Please fix errors before pushing."
-        echo "Run 'npm run check' in the frontend directory to see the errors."
-        exit 1
+        echo "❌ Frontend checks failed!"
+        FAILED=1
     }
     cd ..
+fi
+
+# Run backend checks
+if [ -d "backend" ]; then
+    echo "🔍 Checking backend..."
+    cd backend && npm run check || {
+        echo "❌ Backend checks failed!"
+        FAILED=1
+    }
+    cd ..
+fi
+
+# Exit with error if any checks failed
+if [ $FAILED -eq 1 ]; then
+    echo ""
+    echo "❌ Pre-push checks failed! Please fix errors before pushing."
+    echo ""
+    echo "To see specific errors, run:"
+    echo "  Frontend: cd frontend && npm run check"
+    echo "  Backend:  cd backend && npm run check"
+    exit 1
 fi
 
 echo "✅ All checks passed!"

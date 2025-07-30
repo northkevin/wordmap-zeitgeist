@@ -4,7 +4,7 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import cron from "node-cron";
 import { createClient } from "@supabase/supabase-js";
-import { scrapeRSSFeeds, logScrapeStart, logScrapeComplete } from "./services/scraper.js";
+import { scrapeRSSFeeds } from "./services/scraper.js";
 import {
   processWords,
   reprocessOrphanedPosts,
@@ -240,13 +240,13 @@ app.use(cors());
 app.use(express.json());
 
 // Health check endpoints
-app.get("/health", (req, res) => {
+app.get("/health", (_req, res) => {
   console.log("Health check requested");
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 // Comprehensive system health check
-app.get("/health/system", async (req, res) => {
+app.get("/health/system", async (_req, res) => {
   console.log("System health check requested");
   try {
     const health = await getSystemHealth(supabase);
@@ -262,7 +262,7 @@ app.get("/health/system", async (req, res) => {
 });
 
 // Scraper health check
-app.get("/health/scrapers", async (req, res) => {
+app.get("/health/scrapers", async (_req, res) => {
   console.log("Scraper health check requested");
   try {
     const health = await getScraperHealth(supabase, apiManager);
@@ -278,11 +278,11 @@ app.get("/health/scrapers", async (req, res) => {
 });
 
 // Get words endpoint
-app.get("/api/words", async (req, res) => {
+app.get("/api/words", async (_req, res) => {
   console.log("Words endpoint requested");
   try {
-    const limit = parseInt(req.query.limit as string) || 100;
-    const timeRange = (req.query.timeRange as string) || "24h";
+    const limit = parseInt(_req.query.limit as string) || 100;
+    const timeRange = (_req.query.timeRange as string) || "24h";
     console.log(
       `Fetching top ${limit} words from database with timeRange: ${timeRange}`
     );
@@ -358,10 +358,10 @@ app.get("/api/words", async (req, res) => {
 });
 
 // Get source statistics endpoint
-app.get("/api/sources", async (req, res) => {
+app.get("/api/sources", async (_req, res) => {
   console.log("Source statistics endpoint requested");
   try {
-    const timeRange = req.query.timeRange as string;
+    const timeRange = _req.query.timeRange as string;
     let query = supabase
       .from("source_stats")
       .select("*")
@@ -398,7 +398,7 @@ app.get("/api/sources", async (req, res) => {
 });
 
 // API Manager endpoints
-app.get("/api/manager/sources", (req, res) => {
+app.get("/api/manager/sources", (_req, res) => {
   console.log("API Manager sources requested");
   try {
     const sources = apiManager.getAllSources();
@@ -456,6 +456,7 @@ app.post("/api/manager/scrape", async (req, res) => {
     console.log(`Starting API scrape: ${source}/${endpoint}`);
     
     // Log scrape start
+    const { logScrapeStart } = await import('./services/scraper.js');
     const runId = await logScrapeStart(source, supabase);
     
     const result = await apiManager.scrapeApi(source, endpoint, params || {});
@@ -479,9 +480,11 @@ app.post("/api/manager/scrape", async (req, res) => {
       }
       
       // Log successful completion
+      const { logScrapeComplete } = await import('./services/scraper.js');
       await logScrapeComplete(runId, posts.length, null, supabase);
     } else {
       // Log failed completion
+      const { logScrapeComplete } = await import('./services/scraper.js');
       await logScrapeComplete(runId, 0, result.error || 'Unknown error', supabase);
     }
 
@@ -517,7 +520,7 @@ app.post("/api/scrape", async (req, res) => {
     }
 
     console.log(`[${timestamp}] Starting RSS scraping...`);
-    const posts = await scrapeRSSFeeds(supabase);
+    const posts = await scrapeRSSFeeds();
     console.log(`[${timestamp}] Scraped ${posts.length} posts`);
 
     if (posts.length > 0) {
@@ -591,7 +594,7 @@ app.use("*", (req, res) => {
 app.use(
   (
     err: any,
-    req: express.Request,
+    _req: express.Request,
     res: express.Response,
     _next: express.NextFunction
   ) => {
