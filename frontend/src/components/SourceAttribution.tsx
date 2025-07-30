@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { WordData } from "../types";
+import { getSourceIcon, getSourceColor, LetterIcon, getSourceFallbackLetter } from "../config/sourceIcons";
 
 interface SourceStats {
   source: string;
@@ -11,7 +12,6 @@ interface SourceStats {
 
 interface Source {
   name: string;
-  icon: string;
   url: string;
   wordCount: number;
 }
@@ -22,114 +22,46 @@ interface SourceAttributionProps {
   timeRange: "24h" | "all";
 }
 
-const sourceMapping: Record<string, { icon: string; url: string }> = {
+const sourceUrls: Record<string, string> = {
   // RSS Feed Sources
-  "Hacker News": { icon: "hn", url: "https://news.ycombinator.com" },
-  TechCrunch: { icon: "tc", url: "https://techcrunch.com" },
-  "BBC News": { icon: "bbc", url: "https://bbc.com/news" },
-  Wired: { icon: "wired", url: "https://wired.com" },
-  CNN: { icon: "cnn", url: "https://cnn.com" },
-  "CNN Top Stories": { icon: "cnn", url: "https://cnn.com" },
-  "CNN World": { icon: "cnn", url: "https://cnn.com/world" },
-  "O'Reilly Radar": { icon: "oreilly", url: "https://www.oreilly.com/radar/" },
-  "The Guardian UK": { icon: "guardian", url: "https://theguardian.com/uk" },
-  "The Guardian World": {
-    icon: "guardian",
-    url: "https://theguardian.com/world",
-  },
-  "The Guardian US": {
-    icon: "guardian",
-    url: "https://theguardian.com/us-news",
-  },
-  "NPR Main News": { icon: "npr", url: "https://npr.org" },
-  "Reddit r/all": { icon: "reddit", url: "https://reddit.com/r/all" },
-  "Reddit r/popular": { icon: "reddit", url: "https://reddit.com/r/popular" },
-  "Reddit r/worldnews": {
-    icon: "reddit",
-    url: "https://reddit.com/r/worldnews",
-  },
-  "Reddit Tech Combined": {
-    icon: "reddit",
-    url: "https://reddit.com/r/technology+science+programming",
-  },
+  "Hacker News": "https://news.ycombinator.com",
+  TechCrunch: "https://techcrunch.com",
+  "BBC News": "https://bbc.com/news",
+  Wired: "https://wired.com",
+  CNN: "https://cnn.com",
+  "CNN Top Stories": "https://cnn.com",
+  "CNN World": "https://cnn.com/world",
+  "O'Reilly Radar": "https://www.oreilly.com/radar/",
+  "The Guardian UK": "https://theguardian.com/uk",
+  "The Guardian World": "https://theguardian.com/world",
+  "The Guardian US": "https://theguardian.com/us-news",
+  "NPR Main News": "https://npr.org",
+  "Reddit r/all": "https://reddit.com/r/all",
+  "Reddit r/popular": "https://reddit.com/r/popular",
+  "Reddit r/worldnews": "https://reddit.com/r/worldnews",
+  "Reddit Tech Combined": "https://reddit.com/r/technology+science+programming",
 
   // API Manager Sources
-  YouTube: { icon: "youtube", url: "https://youtube.com" },
-  NewsAPI: { icon: "newsapi", url: "https://newsapi.org" },
-  Reddit: { icon: "reddit", url: "https://reddit.com" },
-  Twitter: { icon: "twitter", url: "https://twitter.com" },
+  YouTube: "https://youtube.com",
+  NewsAPI: "https://newsapi.org",
+  Reddit: "https://reddit.com",
+  Twitter: "https://twitter.com",
 };
 
 const SourceIcon: React.FC<{ source: Source }> = ({ source }) => {
-  const iconComponents = {
-    hn: (
-      <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center text-white font-bold text-sm">
-        Y
-      </div>
-    ),
-    tc: (
-      <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center text-white font-bold text-xs">
-        TC
-      </div>
-    ),
-    bbc: (
-      <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        BBC
-      </div>
-    ),
-    wired: (
-      <div className="w-8 h-8 bg-black border border-white rounded flex items-center justify-center text-white font-bold text-xs">
-        W
-      </div>
-    ),
-    cnn: (
-      <div className="w-8 h-8 bg-red-700 rounded flex items-center justify-center text-white font-bold text-xs">
-        CNN
-      </div>
-    ),
-    oreilly: (
-      <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        O
-      </div>
-    ),
-    guardian: (
-      <div className="w-8 h-8 bg-blue-800 rounded flex items-center justify-center text-white font-bold text-xs">
-        G
-      </div>
-    ),
-    npr: (
-      <div className="w-8 h-8 bg-purple-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        NPR
-      </div>
-    ),
-    reddit: (
-      <div className="w-8 h-8 bg-orange-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        R
-      </div>
-    ),
-    youtube: (
-      <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center text-white font-bold text-xs">
-        YT
-      </div>
-    ),
-    newsapi: (
-      <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        API
-      </div>
-    ),
-    twitter: (
-      <div className="w-8 h-8 bg-blue-400 rounded flex items-center justify-center text-white font-bold text-xs">
-        X
-      </div>
-    ),
-  };
+  const icon = getSourceIcon(source.name, 32);
+  const color = getSourceColor(source.name);
+  const fallbackLetter = getSourceFallbackLetter(source.name);
+
+  // If we have a letter icon in the config, use the LetterIcon component
+  if (fallbackLetter && fallbackLetter.length <= 3) {
+    return <LetterIcon letter={fallbackLetter} color={color} size={32} />;
+  }
 
   return (
-    iconComponents[source.icon as keyof typeof iconComponents] || (
-      <div className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center text-white font-bold text-xs">
-        ?
-      </div>
-    )
+    <div style={{ color }} className="flex items-center justify-center">
+      {icon}
+    </div>
   );
 };
 
@@ -171,12 +103,11 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({
   const { visibleSources, hiddenCount } = useMemo(() => {
     if (loading || statsLoading) {
       // Show placeholder sources when loading
-      const placeholderSources = Object.entries(sourceMapping)
+      const placeholderSources = Object.entries(sourceUrls)
         .slice(0, 8)
-        .map(([name, config]) => ({
+        .map(([name, url]) => ({
           name,
-          icon: config.icon,
-          url: config.url,
+          url,
           wordCount: 0,
         }));
       return { visibleSources: placeholderSources, hiddenCount: 0 };
@@ -185,40 +116,22 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({
     // Convert source stats to display format
     const sourcesWithCounts: Source[] = sourceStats
       .map((stat) => {
-        const mapping = sourceMapping[stat.source];
-        if (!mapping) {
-          console.warn(`No mapping found for source: ${stat.source}`);
+        const url = sourceUrls[stat.source];
+        if (!url) {
+          console.warn(`No URL found for source: ${stat.source}`);
           return null;
         }
 
         return {
           name: stat.source,
-          icon: mapping.icon,
-          url: mapping.url,
+          url,
           wordCount: stat.total_word_count,
         };
       })
       .filter((source): source is Source => source !== null);
 
-    // Group sources by icon (combine similar sources like multiple CNN feeds)
-    const groupedSources = new Map<string, Source>();
-
-    sourcesWithCounts.forEach((source) => {
-      const existing = groupedSources.get(source.icon);
-      if (existing) {
-        // Combine word counts for sources with same icon
-        existing.wordCount += source.wordCount;
-        // Use the shorter name if combining
-        if (source.name.length < existing.name.length) {
-          existing.name = source.name;
-        }
-      } else {
-        groupedSources.set(source.icon, { ...source });
-      }
-    });
-
     // Sort by word count (descending)
-    const sortedSources = Array.from(groupedSources.values()).sort(
+    const sortedSources = sourcesWithCounts.sort(
       (a, b) => b.wordCount - a.wordCount
     );
 
@@ -240,7 +153,7 @@ const SourceAttribution: React.FC<SourceAttributionProps> = ({
       <div className="grid grid-cols-8 md:grid-cols-12 lg:grid-cols-15 gap-3 md:gap-4 max-w-7xl mx-auto px-4 justify-items-center">
         {visibleSources.map((source, index) => (
           <motion.a
-            key={`${source.icon}-${source.name}`}
+            key={`${source.name}`}
             href={source.url}
             target="_blank"
             rel="noopener noreferrer"

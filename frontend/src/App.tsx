@@ -47,7 +47,7 @@ function App() {
     // Refresh data every 5 minutes
     const interval = setInterval(() => fetchWords(), 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [timeRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen bg-gray-900 text-white relative overflow-hidden">
