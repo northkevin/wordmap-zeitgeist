@@ -108,6 +108,7 @@ public
 # Temporary folders
 tmp/
 temp/
+supabase/.temp/
 
 # Editor directories and files
 .vscode/*
