@@ -423,6 +423,25 @@ app.post("/api/manager/scrape", async (req, res) => {
     console.log(`Starting API scrape: ${source}/${endpoint}`);
     const result = await apiManager.scrapeApi(source, endpoint, params || {});
 
+    let postsProcessed = 0;
+    let wordsProcessed = false;
+
+    // Transform API data to posts and save to database
+    if (result.success && result.data) {
+      const { transformApiDataToPosts } = await import('./services/apiDataTransformer.js');
+      const posts = transformApiDataToPosts(result);
+      
+      if (posts.length > 0) {
+        console.log(`Transformed ${posts.length} posts from ${result.source}`);
+        
+        // Process words (this also saves posts to database)
+        await processWords(posts, supabase);
+        postsProcessed = posts.length;
+        wordsProcessed = true;
+        console.log(`Processed ${posts.length} posts from ${result.source}`);
+      }
+    }
+
     res.json({
       success: result.success,
       source: result.source,
@@ -432,6 +451,8 @@ app.post("/api/manager/scrape", async (req, res) => {
         : result.data
         ? 1
         : 0,
+      postsProcessed,
+      wordsProcessed,
       error: result.error,
     });
   } catch (error) {
