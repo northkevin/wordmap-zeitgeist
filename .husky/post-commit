@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+
+# Check if any migration files were committed
+if git diff --cached --name-only HEAD~1 | grep -q "supabase/migrations/"; then
+  echo "📝 Migration files detected in commit. Updating TypeScript types..."
+  
+  # Change to backend directory and generate types
+  cd backend && npm run generate-types
+  
+  # Check if types changed
+  if [[ -n $(git status --porcelain src/types/database.types.ts) ]]; then
+    echo "⚠️  Database types have changed! Don't forget to commit the updated types."
+    echo "   Run: git add backend/src/types/database.types.ts && git commit --amend"
+  else
+    echo "✅ Database types are up to date."
+  fi
+fi

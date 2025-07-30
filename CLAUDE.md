@@ -107,10 +107,15 @@ Backend uses Supabase CLI to generate TypeScript types from the database schema:
 ```bash
 cd backend && npm run generate-types
 ```
-Types are automatically updated via GitHub Actions when:
-- Migrations are added
-- Daily at midnight UTC
-- Manually triggered
+
+Types are automatically updated in the following scenarios:
+1. **When migrations are added/modified** - GitHub Actions runs automatically
+2. **After successful deployments** - Ensures production types stay in sync
+3. **On PRs with migrations** - Warns about pending type changes
+4. **Manual trigger** - Run workflow manually when needed
+5. **Local development** - Post-commit hook reminds you to update types
+
+**Best Practice**: After creating a migration, always run `npm run generate-types` before committing.
 
 ## Key Implementation Details
 - Frontend fetches data every 5 minutes automatically
