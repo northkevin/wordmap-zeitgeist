@@ -20,6 +20,34 @@ const formatWordCount = (count: number): string => {
   return count.toString();
 };
 
+const getSourceLabel = (name: string): string => {
+  // Create short labels for sources
+  const labelMap: Record<string, string> = {
+    "Reddit r/all": "r/all",
+    "Reddit r/popular": "r/pop",
+    "Reddit r/worldnews": "r/news",
+    "Reddit Tech Combined": "r/tech",
+    "CNN Top Stories": "CNN",
+    "CNN World": "CNN",
+    "The Guardian UK": "Guard",
+    "The Guardian World": "Guard",
+    "The Guardian US": "Guard",
+    "Hacker News": "HN",
+    "BBC News": "BBC",
+    "NPR Main News": "NPR",
+    "O'Reilly Radar": "O'R",
+    TechCrunch: "TC",
+    Wired: "Wired",
+    YouTube: "YT",
+    Twitter: "X",
+    NewsAPI: "News",
+    Reddit: "Reddit",
+    CNN: "CNN",
+  };
+  
+  return labelMap[name] || name.substring(0, 5);
+};
+
 const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
   // Map of source name to count (sum of counts for words in top 50)
   const sourceCounts = useMemo(() => {
@@ -44,7 +72,7 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
 
   if (loading) {
     return (
-      <div className="bg-[#1a1a2e] border border-white/10 rounded-lg h-16 flex items-center justify-center px-8">
+      <div className="bg-[#1a1a2e] border border-white/10 rounded-lg h-20 flex items-center justify-center px-8">
         <span className="text-gray-500 text-sm">Loading sources...</span>
       </div>
     );
@@ -59,33 +87,34 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="bg-[#1a1a2e] border border-white/10 rounded-lg h-16 flex items-center justify-center px-8"
+      className="bg-[#1a1a2e] border border-white/10 rounded-lg py-3 px-8"
     >
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center justify-center space-x-8">
         {sources.map((source, index) => (
           <React.Fragment key={source.name}>
-            <motion.span
+            <motion.div
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
-              className="flex items-center group"
+              className="flex flex-col items-center group"
               title={`${source.name}: ${source.wordCount.toLocaleString()} mentions`}
             >
-              <span
-                className="mr-2"
+              <div
+                className="mb-1"
                 style={{ 
-                  display: "inline-flex", 
-                  alignItems: "center",
                   color: getSourceColor(source.name)
                 }}
               >
-                {getSourceIcon(source.name, 24)}
-              </span>
-              <span className="text-gray-400 text-sm font-medium ml-1">
+                {getSourceIcon(source.name, 32)}
+              </div>
+              <span className="text-gray-400 text-xs font-medium">
                 {formatWordCount(source.wordCount)}
               </span>
-            </motion.span>
+              <span className="text-gray-500 text-[10px] mt-0.5 truncate max-w-[50px]">
+                {getSourceLabel(source.name)}
+              </span>
+            </motion.div>
             {index < sources.length - 1 && (
-              <span className="text-gray-500 text-sm mx-2">•</span>
+              <span className="text-gray-600 text-xs self-center">•</span>
             )}
           </React.Fragment>
         ))}
