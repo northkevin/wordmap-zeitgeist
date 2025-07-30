@@ -122,10 +122,16 @@ async function getDatabaseStats(supabase: SupabaseClient): Promise<SystemHealth[
       supabase.from('posts').select('count', { count: 'exact', head: true }),
       supabase.from('words').select('count', { count: 'exact', head: true }),
       supabase.from('posts').select('count', { count: 'exact', head: true }).eq('processed', false),
-      supabase.from('posts').select('source').then(result => ({ 
-        data: result.data ? [...new Set(result.data.map(p => p.source))].length : 0, 
-        error: result.error 
-      }))
+      supabase
+        .from('posts')
+        .select('source')
+        .then(result => {
+          if (result.error) {
+            return { data: 0, error: result.error };
+          }
+          const uniqueSources = [...new Set(result.data?.map(p => p.source) || [])];
+          return { data: uniqueSources.length, error: null };
+        })
     ])
     
     return {

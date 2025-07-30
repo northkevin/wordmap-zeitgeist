@@ -170,28 +170,43 @@ function StatusPage() {
                         .map(([source, health]) => (
                           <div
                             key={source}
-                            className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700"
+                            className={`backdrop-blur-sm rounded-lg p-4 border ${
+                              health.status === "disabled"
+                                ? "bg-gray-900/30 border-gray-800/50 opacity-60"
+                                : "bg-gray-800/50 border-gray-700"
+                            }`}
                           >
                             <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium">{source}</h4>
+                              <h4 className={`font-medium ${
+                                health.status === "disabled" ? "text-gray-500" : "text-white"
+                              }`}>
+                                {source}
+                                {health.status === "disabled" && (
+                                  <span className="ml-2 text-xs text-gray-600">(disabled)</span>
+                                )}
+                              </h4>
                               <span
                                 className={`inline-block w-3 h-3 rounded-full ${
                                   health.status === "healthy"
                                     ? "bg-green-500"
                                     : health.status === "degraded"
                                     ? "bg-yellow-500"
+                                    : health.status === "disabled"
+                                    ? "bg-gray-600"
                                     : "bg-red-500"
                                 }`}
                               />
                             </div>
-                            <div className="text-sm text-gray-400 space-y-1">
+                            <div className={`text-sm space-y-1 ${
+                              health.status === "disabled" ? "text-gray-600" : "text-gray-400"
+                            }`}>
                               <p>Posts (24h): {health.postsLast24h}</p>
                               <p>Posts (1h): {health.postsLastHour}</p>
                               <p>
                                 Last success:{" "}
                                 {health.lastSuccess
                                   ? new Date(health.lastSuccess).toLocaleTimeString()
-                                  : "Never"}
+                                  : health.status === "disabled" ? "N/A" : "Never"}
                               </p>
                             </div>
                           </div>
@@ -209,29 +224,47 @@ function StatusPage() {
                         .map(([source, health]) => (
                           <div
                             key={source}
-                            className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700"
+                            className={`backdrop-blur-sm rounded-lg p-4 border ${
+                              health.status === "disabled"
+                                ? "bg-gray-900/30 border-gray-800/50 opacity-60"
+                                : "bg-gray-800/50 border-gray-700"
+                            }`}
                           >
                             <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium">{source}</h4>
+                              <h4 className={`font-medium ${
+                                health.status === "disabled" ? "text-gray-500" : "text-white"
+                              }`}>
+                                {source}
+                                {health.status === "disabled" && (
+                                  <span className="ml-2 text-xs text-gray-600">(disabled)</span>
+                                )}
+                              </h4>
                               <span
                                 className={`inline-block w-3 h-3 rounded-full ${
                                   health.status === "healthy"
                                     ? "bg-green-500"
                                     : health.status === "degraded"
                                     ? "bg-yellow-500"
+                                    : health.status === "disabled"
+                                    ? "bg-gray-600"
                                     : "bg-red-500"
                                 }`}
                               />
                             </div>
-                            <div className="text-sm text-gray-400 space-y-1">
+                            <div className={`text-sm space-y-1 ${
+                              health.status === "disabled" ? "text-gray-600" : "text-gray-400"
+                            }`}>
                               <p>Posts (24h): {health.postsLast24h}</p>
                               <p>Posts (1h): {health.postsLastHour}</p>
-                              {health.rateLimit && (
+                              {health.rateLimit && health.status !== "disabled" && (
                                 <p>
                                   Rate limit: {health.rateLimit.remaining}/{health.rateLimit.perHour}
                                 </p>
                               )}
-                              {health.lastError && (
+                              {health.status === "disabled" && (
+                                <p>Status: Disabled in configuration</p>
+                              )}
+                              {health.lastError && health.status !== "disabled" && (
                                 <p className="text-red-400 text-xs">{health.lastError}</p>
                               )}
                             </div>

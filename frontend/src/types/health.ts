@@ -25,9 +25,10 @@ export interface SystemHealth {
 }
 
 export interface ScraperSource {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: 'healthy' | 'degraded' | 'unhealthy' | 'disabled';
   postsLast24h: number;
   postsLastHour: number;
+  enabled?: boolean;
   lastSuccess?: string;
   lastError?: string;
   rateLimit?: {
@@ -37,7 +38,7 @@ export interface ScraperSource {
 }
 
 export interface ScraperHealth {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: 'healthy' | 'degraded' | 'unhealthy' | 'disabled';
   timestamp: string;
   sources?: {
     rss?: Record<string, ScraperSource>;
