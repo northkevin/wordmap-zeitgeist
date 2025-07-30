@@ -14,7 +14,7 @@ services:
         sync: false
       - key: SCRAPE_SECRET
         generateValue: true
-    healthCheckPath: /health
+    healthCheckPath: /api/health
 
   # Frontend Static Site
   - type: static

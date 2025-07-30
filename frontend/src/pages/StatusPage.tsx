@@ -14,8 +14,8 @@ function StatusPage() {
     try {
       setLoading(true);
       const [systemResponse, scraperResponse] = await Promise.all([
-        fetch("/health/system"),
-        fetch("/health/scrapers"),
+        fetch("/api/health/system"),
+        fetch("/api/health/scrapers"),
       ]);
 
       if (systemResponse.ok && scraperResponse.ok) {

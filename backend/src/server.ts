@@ -241,13 +241,13 @@ app.use(cors());
 app.use(express.json());
 
 // Health check endpoints
-app.get("/health", (_req, res) => {
+app.get("/api/health", (_req, res) => {
   console.log("Health check requested");
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 // Comprehensive system health check
-app.get("/health/system", async (_req, res) => {
+app.get("/api/health/system", async (_req, res) => {
   console.log("System health check requested");
   try {
     const health = await getSystemHealth(supabase);
@@ -263,7 +263,7 @@ app.get("/health/system", async (_req, res) => {
 });
 
 // Scraper health check
-app.get("/health/scrapers", async (_req, res) => {
+app.get("/api/health/scrapers", async (_req, res) => {
   console.log("Scraper health check requested");
   try {
     const health = await getScraperHealth(supabase, apiManager);
@@ -288,8 +288,19 @@ app.get("/api/words", async (_req, res) => {
       `Fetching top ${limit} words from database with timeRange: ${timeRange}`
     );
 
-    let words: any[] = [];
-    let error: any = null;
+    type WordWithSource = {
+      word_id: string
+      count: number
+      last_seen: string | null
+      source: string
+      words: {
+        word: string
+        id: string
+      }
+    }
+    
+    let words: WordWithSource[] = [];
+    let error: Error | null = null;
 
     if (timeRange === "24h") {
       // Query for last 24 hours
@@ -313,8 +324,16 @@ app.get("/api/words", async (_req, res) => {
         error = queryError;
       } else {
         // Group by word and sum counts, and collect per-source counts
-        const wordMap = new Map();
-        data?.forEach((ws: any) => {
+        interface WordAggregateEntry {
+          id: string
+          word: string
+          count: number
+          last_seen: string | null
+          sources: Array<{ source: string; count: number }>
+        }
+        
+        const wordMap = new Map<string, WordAggregateEntry>();
+        data?.forEach((ws) => {
           const word = ws.words;
           if (!wordMap.has(word.id)) {
             wordMap.set(word.id, {
@@ -325,12 +344,12 @@ app.get("/api/words", async (_req, res) => {
               sources: [],
             });
           }
-          const entry = wordMap.get(word.id);
+          const entry = wordMap.get(word.id)!;
           entry.count += ws.count;
           entry.sources.push({ source: ws.source, count: ws.count });
         });
         words = Array.from(wordMap.values())
-          .sort((a: any, b: any) => b.count - a.count)
+          .sort((a, b) => b.count - a.count)
           .slice(0, limit);
       }
     } else {
