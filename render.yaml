@@ -28,6 +28,9 @@ services:
       - type: rewrite
         source: /api/*
         destination: https://wordmap-zeitgeist-backend.onrender.com$1
+      - type: rewrite
+        source: /*
+        destination: /index.html
     headers:
       - path: /*
         name: X-Frame-Options

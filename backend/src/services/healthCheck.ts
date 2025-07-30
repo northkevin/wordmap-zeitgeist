@@ -1,5 +1,12 @@
 import { SupabaseClient } from '@supabase/supabase-js'
-// import type { ApiManager } from './apiManager.js'
+import { Database } from '../types/database.types.js'
+import { 
+  SystemHealth, 
+  ScraperHealth, 
+  DatabaseStats, 
+  ApiSourceStats,
+  HealthCheckResult
+} from '../types/health.types.js'
 import * as os from 'os'
 import * as fs from 'fs/promises'
 import { execSync } from 'child_process'
@@ -7,27 +14,8 @@ import { execSync } from 'child_process'
 interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy'
   message?: string
-  details?: any
+  details?: Record<string, unknown>
 }
-
-interface SystemHealth {
-  status: 'healthy' | 'degraded' | 'unhealthy'
-  timestamp: string
-  version: {
-    backend: string
-    frontend: string
-    git: {
-      commit: string
-      branch: string
-      dirty: boolean
-    }
-  }
-  system: {
-    node: string
-    platform: string
-    uptime: number
-    memory: {
-      used: string
       total: string
       percentage: number
     }
@@ -84,12 +72,13 @@ interface ScraperHealth {
   issues: string[]
 }
 
-// Cache for health check results
-const cache = new Map<string, { data: any; expires: number }>()
+// Cache for health check results with proper typing
+type CacheEntry<T> = { data: T; expires: number }
+const cache = new Map<string, CacheEntry<unknown>>()
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 function getCached<T>(key: string): T | null {
-  const cached = cache.get(key)
+  const cached = cache.get(key) as CacheEntry<T> | undefined
   if (cached && cached.expires > Date.now()) {
     return cached.data
   }
@@ -97,7 +86,7 @@ function getCached<T>(key: string): T | null {
   return null
 }
 
-function setCached(key: string, data: any): void {
+function setCached<T>(key: string, data: T): void {
   cache.set(key, {
     data,
     expires: Date.now() + CACHE_TTL
@@ -306,10 +295,27 @@ export async function getSystemHealth(supabase: SupabaseClient): Promise<SystemH
   return health
 }
 
-async function getSourceHealthData(supabase: SupabaseClient, apiManager?: any): Promise<{
-  rssHealth: Record<string, any>
-  apiHealth: Record<string, any>
-  errors: any[]
+interface SourceHealthMetrics {
+  lastSuccess: string
+  postsLast24h: number
+  postsLastHour: number
+  isHealthy: boolean
+  errors?: string[]
+}
+
+interface HttpError {
+  status_code: number
+  error_msg: string | null
+  created: string
+}
+
+async function getSourceHealthData(
+  supabase: SupabaseClient<Database>,
+  apiManager?: { getAllSources: () => string[]; getSourceInfo: (id: string) => ApiSourceStats | null }
+): Promise<{
+  rssHealth: Record<string, SourceHealthMetrics>
+  apiHealth: Record<string, ApiSourceStats>
+  errors: HttpError[]
 }> {
   try {
     // Get source statistics for last 24 hours
@@ -358,8 +364,8 @@ async function getSourceHealthData(supabase: SupabaseClient, apiManager?: any): 
       }
     }
     
-    const rssHealth: Record<string, any> = {}
-    const apiHealth: Record<string, any> = {}
+    const rssHealth: Record<string, SourceHealthMetrics> = {}
+    const apiHealth: Record<string, ApiSourceStats> = {}
     
     // Define known sources
     const rssSources = [
@@ -430,7 +436,10 @@ async function getSourceHealthData(supabase: SupabaseClient, apiManager?: any): 
   }
 }
 
-export async function getScraperHealth(supabase: SupabaseClient, apiManager?: any): Promise<ScraperHealth> {
+export async function getScraperHealth(
+  supabase: SupabaseClient<Database>, 
+  apiManager?: { getAllSources: () => string[]; getSourceInfo: (id: string) => ApiSourceStats | null }
+): Promise<ScraperHealth> {
   const cached = getCached<ScraperHealth>('scraper-health')
   if (cached) return cached
   

@@ -1,11 +1,23 @@
 import { ApiConfig, ApiResponse, ApiSource, RequestLog } from './ApiSource.js'
+import { 
+  YouTubeSearchResponse, 
+  NewsApiResponse, 
+  TwitterResponse, 
+  RedditResponse 
+} from '../types/api.types.js'
 
 // Re-export types for backward compatibility
 export type { ApiConfig, ApiResponse, RequestLog } from './ApiSource.js'
 import { YouTubeApiSource, TwitterApiSource, NewsApiSource, RedditApiSource } from './apiSources/index.js'
 
+// Union type for all possible API responses
+type ApiSourceTypes = ApiSource<YouTubeSearchResponse> | 
+                     ApiSource<NewsApiResponse> | 
+                     ApiSource<TwitterResponse> | 
+                     ApiSource<RedditResponse>
+
 // Store for API sources
-const sources = new Map<string, ApiSource>()
+const sources = new Map<string, ApiSourceTypes>()
 
 // Request logging
 const requestLogs: RequestLog[] = []
@@ -110,8 +122,12 @@ export function logRequest(log: RequestLog): void {
   console.log(`${status} ${log.source}: ${log.endpoint} (${log.responseTime}ms)${log.error ? ` - ${log.error}` : ''}`)
 }
 
-// Scrape API endpoint
-export async function scrapeApi(sourceId: string, endpoint: string, params: Record<string, any> = {}): Promise<ApiResponse> {
+// Scrape API endpoint with proper types
+export async function scrapeApi(
+  sourceId: string, 
+  endpoint: string, 
+  params: Record<string, string> = {}
+): Promise<ApiResponse<YouTubeSearchResponse | NewsApiResponse | TwitterResponse | RedditResponse>> {
   const source = sources.get(sourceId)
   
   if (!source) {
@@ -122,7 +138,7 @@ export async function scrapeApi(sourceId: string, endpoint: string, params: Reco
   
   // Temporarily monkey-patch the source to use our logging
   const originalMakeRequest = source.makeRequest.bind(source)
-  source.makeRequest = async function(endpoint: string, params: Record<string, any> = {}) {
+  source.makeRequest = async function(endpoint: string, params: Record<string, string> = {}) {
     const startTime = Date.now()
     const result = await originalMakeRequest(endpoint, params)
     
@@ -147,12 +163,25 @@ export async function scrapeApi(sourceId: string, endpoint: string, params: Reco
 }
 
 // Get source information
-export function getSourceInfo(sourceId: string): { config: ApiConfig; rateLimit: any } | null {
+export function getSourceInfo(sourceId: string): { 
+  config: ApiConfig; 
+  rateLimit: {
+    source: string
+    requestCount: number
+    lastRequestTime: Date | null
+    hourlyResetTime: Date
+    remainingRequests: number
+  }
+} | null {
   const source = sources.get(sourceId)
   if (!source) return null
 
+  // Access protected property through a type assertion
+  // This is safe because we control the source instances
+  const typedSource = source as ApiSource<unknown> & { config: ApiConfig }
+  
   return {
-    config: (source as any).config,
+    config: typedSource.config,
     rateLimit: source.getStats()
   }
 }
