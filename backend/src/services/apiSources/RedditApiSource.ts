@@ -1,23 +1,27 @@
-import { ApiSource, ApiResponse, ApiManager } from '../apiManager.js'
+import { ApiSource, ApiResponse } from '../ApiSource.js'
 
 export class RedditApiSource extends ApiSource {
   private accessToken: string = ''
   private tokenExpiry: Date | null = null
+  private clientId: string
+  private clientSecret: string
 
-  protected async getAccessToken(): Promise<string> {
+  constructor(config: any, apiKey: string) {
+    super(config, apiKey)
+    this.clientId = process.env.REDDIT_CLIENT_ID || ''
+    this.clientSecret = process.env.REDDIT_CLIENT_SECRET || ''
+  }
+
+  private async ensureAccessToken(): Promise<void> {
     if (this.accessToken && this.tokenExpiry && new Date() < this.tokenExpiry) {
-      return this.accessToken
+      return
     }
 
-    // Reddit OAuth requires client credentials
-    const clientId = process.env.REDDIT_CLIENT_ID
-    const clientSecret = process.env.REDDIT_CLIENT_SECRET
-    
-    if (!clientId || !clientSecret) {
+    if (!this.clientId || !this.clientSecret) {
       throw new Error('Reddit API credentials not configured')
     }
 
-    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+    const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')
     
     const response = await fetch('https://www.reddit.com/api/v1/access_token', {
       method: 'POST',
@@ -41,65 +45,31 @@ export class RedditApiSource extends ApiSource {
     
     this.accessToken = data.access_token
     this.tokenExpiry = new Date(Date.now() + (data.expires_in * 1000))
-    
-    return this.accessToken
   }
 
-  protected buildAuthHeaders(): Record<string, string> {
-    const headers = super.buildAuthHeaders()
-    // OAuth token will be added in fetch method
+  protected getHeaders(): Record<string, string> {
+    const headers = super.getHeaders()
+    // Add the OAuth token
+    headers['Authorization'] = `Bearer ${this.accessToken}`
     return headers
   }
 
-  public async fetch(endpoint: string, params: Record<string, any> = {}): Promise<ApiResponse> {
+  public async makeRequest(endpoint: string, params: Record<string, any> = {}): Promise<ApiResponse> {
     try {
-      const token = await this.getAccessToken()
-      const headers = {
-        ...this.buildAuthHeaders(),
-        'Authorization': `Bearer ${token}`
-      }
-
-      await this.enforceRateLimit()
+      // Ensure we have a valid access token before making the request
+      await this.ensureAccessToken()
       
-      const url = this.buildUrl(endpoint, params)
-      const startTime = Date.now()
-      
-      const response = await fetch(url, { headers })
-      const responseTime = Date.now() - startTime
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      const parsedData = await this.parseResponse(data, endpoint, params)
-
-      ApiManager.logRequest({
-        source: this.config.name,
-        endpoint,
-        timestamp: new Date(),
-        success: true,
-        responseTime
-      })
-
-      return {
-        source: this.config.name,
-        data: parsedData,
-        timestamp: new Date(),
-        success: true
-      }
-
+      // Now call the parent class makeRequest which will use our getHeaders()
+      return await super.makeRequest(endpoint, params)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      console.error(`❌ ${this.config.name}: Request failed - ${errorMessage}`)
-      
-      return {
-        source: this.config.name,
-        data: null,
-        timestamp: new Date(),
-        success: false,
-        error: errorMessage
+      // If it's an auth error, clear the token and retry once
+      if (error instanceof Error && error.message.includes('401')) {
+        this.accessToken = ''
+        this.tokenExpiry = null
+        await this.ensureAccessToken()
+        return await super.makeRequest(endpoint, params)
       }
+      throw error
     }
   }
 

@@ -20,6 +20,9 @@ build/
 # MCP configuration (contains API keys)
 .mcp.json
 
+# Planning documents
+supabase-type-generation-plan.md
+
 # IDE
 .vscode/
 .idea/

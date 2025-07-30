@@ -1,4 +1,4 @@
-import { ApiSource } from '../apiManager.js'
+import { ApiSource } from '../ApiSource.js'
 
 export class NewsApiSource extends ApiSource {
   protected async parseResponse(data: any, _endpoint: string, _params: Record<string, any>): Promise<any> {

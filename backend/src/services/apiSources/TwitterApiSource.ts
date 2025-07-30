@@ -1,4 +1,4 @@
-import { ApiSource } from '../apiManager.js'
+import { ApiSource } from '../ApiSource.js'
 
 export class TwitterApiSource extends ApiSource {
   protected async parseResponse(data: any, endpoint: string, _params: Record<string, any>): Promise<any> {
