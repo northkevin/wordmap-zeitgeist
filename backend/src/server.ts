@@ -319,13 +319,26 @@ app.get("/api/words", async (_req, res) => {
           words!inner(word, id)
         `
         )
-        .gte("last_seen", timestamp24h);
+        .gte("last_seen", timestamp24h)
+        .order("last_seen", { ascending: false });
         
       console.log(`📊 Raw query returned ${data?.length || 0} word-source records`);
       
       // Debug: Check for API sources in raw data
       const apiRecords = data?.filter(ws => ['YouTube', 'NewsAPI', 'Twitter'].includes(ws.source)) || [];
       console.log(`🔍 API records in raw data: ${apiRecords.length} (YouTube: ${apiRecords.filter(r => r.source === 'YouTube').length}, NewsAPI: ${apiRecords.filter(r => r.source === 'NewsAPI').length}, Twitter: ${apiRecords.filter(r => r.source === 'Twitter').length})`);
+      
+      // Debug: Show all unique sources in the result to understand what we're getting
+      const allSources = [...new Set(data?.map(ws => ws.source) || [])];
+      console.log(`📋 All sources in raw data (${allSources.length}): ${allSources.join(', ')}`);
+      
+      // Debug: Show timestamp range of returned data
+      if (data && data.length > 0) {
+        const timestamps = data.map(ws => ws.last_seen).filter(Boolean);
+        const minTime = Math.min(...timestamps.map(t => new Date(t).getTime()));
+        const maxTime = Math.max(...timestamps.map(t => new Date(t).getTime()));
+        console.log(`⏰ Data timestamp range: ${new Date(minTime).toISOString()} to ${new Date(maxTime).toISOString()}`);
+      }
       
       if (apiRecords.length > 0) {
         const topApiWords = apiRecords.slice(0, 3).map(r => `${r.words.word}:${r.count} (${r.source})`);
