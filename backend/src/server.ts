@@ -4,6 +4,7 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import cron from "node-cron";
 import { createClient } from "@supabase/supabase-js";
+import { Database } from "./types/database.types.js";
 import { scrapeRSSFeeds } from "./services/scraper.js";
 import {
   processWords,
@@ -18,8 +19,8 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Supabase client
-const supabase = createClient(
+// Supabase client with type safety
+export const supabase = createClient<Database>(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
@@ -44,10 +45,10 @@ async function validateDatabase() {
 
     // Validate and count records in each crucial table
     const tables = [
-      { name: "words", description: "Word frequency data" },
-      { name: "posts", description: "Scraped posts" },
-      { name: "word_sources", description: "Source-specific word counts" },
-      { name: "test_words", description: "Test words (legacy)" },
+      { name: "words" as const, description: "Word frequency data" },
+      { name: "posts" as const, description: "Scraped posts" },
+      { name: "word_sources" as const, description: "Source-specific word counts" },
+      { name: "test_words" as const, description: "Test words (legacy)" },
     ];
 
     for (const table of tables) {
@@ -164,7 +165,7 @@ async function validateDatabase() {
     } else if (recentPosts && recentPosts.length > 0) {
       console.log("📰 Recent posts in database:");
       recentPosts.forEach((post, index) => {
-        const date = new Date(post.scraped_at).toLocaleString();
+        const date = post.scraped_at ? new Date(post.scraped_at).toLocaleString() : 'Unknown date';
         console.log(
           `   ${index + 1}. [${post.source}] "${post.title.substring(
             0,

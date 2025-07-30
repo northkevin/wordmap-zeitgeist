@@ -99,8 +99,18 @@ TWITTER_BEARER_TOKEN=
 ```
 
 ## TypeScript Configuration
-- Backend: Strict mode, ES2022 target, ESNext modules
+- Backend: Strict mode, ES2022 target, ESNext modules, database types auto-generated
 - Frontend: Strict mode with unused variable checks, React JSX, path aliases (@/*)
+
+### Database Type Generation
+Backend uses Supabase CLI to generate TypeScript types from the database schema:
+```bash
+cd backend && npm run generate-types
+```
+Types are automatically updated via GitHub Actions when:
+- Migrations are added
+- Daily at midnight UTC
+- Manually triggered
 
 ## Key Implementation Details
 - Frontend fetches data every 5 minutes automatically

@@ -1,0 +1,77 @@
+name: Update Supabase Types
+
+on:
+  # Run weekly on Sundays at midnight UTC (more cost-effective)
+  schedule:
+    - cron: '0 0 * * 0'
+  # Allow manual trigger
+  workflow_dispatch:
+  # Run on changes to migration files
+  push:
+    paths:
+      - 'supabase/migrations/**'
+      - '.github/workflows/update-supabase-types.yml'
+
+jobs:
+  update-types:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+      
+      - name: Generate Supabase types
+        env:
+          SUPABASE_PROJECT_ID: unqqozhwbyvukotkukpf
+        run: |
+          cd backend
+          npx supabase gen types typescript --project-id "$SUPABASE_PROJECT_ID" > src/types/database.types.ts
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n $(git status --porcelain backend/src/types/database.types.ts) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Pull Request
+        if: steps.check_changes.outputs.changes == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update Supabase database types'
+          title: 'Update Supabase Database Types'
+          body: |
+            This PR updates the TypeScript types generated from the Supabase database schema.
+            
+            The types were automatically generated using:
+            ```bash
+            npx supabase gen types typescript --project-id unqqozhwbyvukotkukpf
+            ```
+            
+            Please review the changes to ensure they match your expected schema modifications.
+          branch: update-supabase-types
+          delete-branch: true
+          labels: |
+            automated
+            dependencies
+          reviewers: kevinnorth

@@ -12,7 +12,8 @@
     "type-check": "tsc --noEmit",
     "check": "npm run type-check && npm run lint",
     "clean": "rm -rf dist node_modules package-lock.json",
-    "fresh:build": "npm run clean && npm install && npm run build"
+    "fresh:build": "npm run clean && npm install && npm run build",
+    "generate-types": "supabase gen types typescript --local > ./src/types/database.types.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.4",
@@ -31,6 +32,7 @@
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.57.1",
+    "supabase": "^2.33.5",
     "tsx": "^4.6.0",
     "typescript": "^5.2.2"
   }
