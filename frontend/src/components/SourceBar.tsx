@@ -51,10 +51,8 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
   const sourceCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     words.forEach((w) => {
-      if (Array.isArray(w.sources)) {
-        w.sources.forEach((src: { source: string; count: number }) => {
-          counts[src.source] = (counts[src.source] || 0) + src.count;
-        });
+      if (w.source) {
+        counts[w.source] = (counts[w.source] || 0) + w.count;
       }
     });
     return counts;

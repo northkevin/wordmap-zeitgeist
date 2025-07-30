@@ -1,9 +1,12 @@
 export interface WordData {
-  id: string  // UUID from database
-  word: string
+  word_id: string
   count: number
-  last_seen: string
-  sources?: Array<{ source: string; count: number }>
+  last_seen: string | null
+  source: string
+  words: {
+    word: string
+    id: string
+  }
 }
 
 export interface PostData {

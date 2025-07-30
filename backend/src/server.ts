@@ -372,7 +372,17 @@ app.get("/api/words", async (_req, res) => {
         .order("count", { ascending: false })
         .limit(limit);
 
-      words = (data || []).map((w: any) => ({ ...w, sources: [] }));
+      // Transform to match WordWithSource type  
+      words = (data || []).map((w: any) => ({
+        word_id: w.id,
+        count: w.count,
+        last_seen: w.last_seen,
+        source: 'aggregated',
+        words: {
+          word: w.word,
+          id: w.id
+        }
+      }));
       error = queryError;
     }
 

@@ -29,7 +29,7 @@ const Stats: React.FC<StatsProps> = ({ words, loading }) => {
     {
       icon: Activity,
       label: "Top Word",
-      value: loading ? "..." : topWord?.word || "N/A",
+      value: loading ? "..." : topWord?.words.word || "N/A",
       color: "text-purple-400",
     },
   ];

@@ -24,7 +24,10 @@ const WordMap: React.FC<WordMapProps> = ({ words, loading }) => {
       const color = `hsl(${hue}, 70%, 60%)`;
 
       return {
-        ...word,
+        id: word.words.id,
+        word: word.words.word,
+        count: word.count,
+        source: word.source,
         fontSize,
         opacity,
         color,
