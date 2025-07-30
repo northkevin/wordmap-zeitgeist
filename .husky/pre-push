@@ -1,0 +1,16 @@
+#!/bin/sh
+
+echo "Running pre-push checks..."
+
+# Run frontend checks
+if [ -d "frontend" ]; then
+    echo "Running frontend type-check and lint..."
+    cd frontend && npm run check || {
+        echo "❌ Frontend checks failed! Please fix errors before pushing."
+        echo "Run 'npm run check' in the frontend directory to see the errors."
+        exit 1
+    }
+    cd ..
+fi
+
+echo "✅ All checks passed!"

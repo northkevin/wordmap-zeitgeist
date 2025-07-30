@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important: Package Manager
+
+**This project uses npm as the package manager. Do NOT use pnpm, yarn, or other package managers.**
+
 ## Project Overview
 
 Wordmap Zeitgeist is a real-time visualization of the internet's zeitgeist through word frequency analysis from RSS feeds and news sources. It's a monorepo with:
@@ -17,8 +21,13 @@ Wordmap Zeitgeist is a real-time visualization of the internet's zeitgeist throu
 cd frontend && npm run dev        # Start dev server (port 5173)
 cd frontend && npm run build      # Build for production
 cd frontend && npm run lint       # Run ESLint
+cd frontend && npm run type-check # Run TypeScript type checking
+cd frontend && npm run check      # Run both type-check and lint
 cd frontend && npm run preview    # Preview production build
 ```
+
+### Pre-push Checks
+To avoid deployment failures, always run `npm run check` in the frontend directory before pushing. This will catch TypeScript and linting errors early.
 
 ### Backend Development
 ```bash
