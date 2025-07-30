@@ -441,7 +441,7 @@ app.get("/api/words", async (_req, res) => {
           }
         }));
         
-        console.log(`🔍 All time results: ${words.length} words, ${words.filter(w => w.sources.some(s => ['YouTube', 'NewsAPI', 'Twitter'].includes(s.source))).length} with API sources`);
+        console.log(`🔍 All time results: ${words.length} words, ${words.filter(w => w.sources && w.sources.some(s => ['YouTube', 'NewsAPI', 'Twitter'].includes(s.source))).length} with API sources`);
       }
       
       // Skip the aggregation step since we already have aggregated data
