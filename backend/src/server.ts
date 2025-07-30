@@ -334,10 +334,12 @@ app.get("/api/words", async (_req, res) => {
       
       // Debug: Show timestamp range of returned data
       if (data && data.length > 0) {
-        const timestamps = data.map(ws => ws.last_seen).filter(Boolean);
-        const minTime = Math.min(...timestamps.map(t => new Date(t).getTime()));
-        const maxTime = Math.max(...timestamps.map(t => new Date(t).getTime()));
-        console.log(`⏰ Data timestamp range: ${new Date(minTime).toISOString()} to ${new Date(maxTime).toISOString()}`);
+        const timestamps = data.map(ws => ws.last_seen).filter((ts): ts is string => Boolean(ts));
+        if (timestamps.length > 0) {
+          const minTime = Math.min(...timestamps.map(t => new Date(t).getTime()));
+          const maxTime = Math.max(...timestamps.map(t => new Date(t).getTime()));
+          console.log(`⏰ Data timestamp range: ${new Date(minTime).toISOString()} to ${new Date(maxTime).toISOString()}`);
+        }
       }
       
       if (apiRecords.length > 0) {
