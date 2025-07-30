@@ -440,6 +440,16 @@ app.get("/api/words", async (_req, res) => {
     }
 
     console.log(`Successfully fetched ${words?.length || 0} words`);
+    
+    // Debug logging for top 5 words to help diagnose missing API data
+    if (words && words.length > 0) {
+      console.log("🔍 Top 5 words returned:");
+      words.slice(0, 5).forEach((word, index) => {
+        const apiSources = word.sources?.filter(s => ['YouTube', 'NewsAPI', 'Twitter'].includes(s.source)) || [];
+        console.log(`   ${index + 1}. "${word.words.word}" (${word.count}) - API sources: ${apiSources.length > 0 ? apiSources.map(s => `${s.source}:${s.count}`).join(', ') : 'none'}`);
+      });
+    }
+    
     res.json({ words: words || [] });
   } catch (error) {
     console.error("Server error in /api/words:", error);

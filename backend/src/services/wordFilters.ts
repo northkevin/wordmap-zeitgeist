@@ -505,7 +505,26 @@ export const SOURCE_SPECIFIC_STOPWORDS: Record<string, Set<string>> = {
     "programming",
   ]),
   // API Manager sources
-  YouTube: new Set(["youtube", "google"]),
+  YouTube: new Set([
+    "youtube", 
+    "google",
+    // Common YouTube phrases that don't provide zeitgeist insights
+    "trailer",
+    "official",
+    "music",
+    "video",
+    "watch",
+    "subscribe",
+    "like",
+    "comment",
+    "share",
+    "channel",
+    "playlist",
+    "premiere",
+    "live",
+    "stream",
+    "streaming"
+  ]),
   NewsAPI: new Set(["newsapi"]),
   Reddit: new Set(["reddit", "subreddit"]),
   Twitter: new Set(["twitter", "tweet", "retweet"]),
