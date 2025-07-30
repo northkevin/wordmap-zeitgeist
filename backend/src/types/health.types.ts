@@ -8,65 +8,82 @@ export interface SystemHealth {
   timestamp: string
   version: {
     backend?: string
+    frontend?: string
     git?: {
       commit?: string
       branch?: string
-      timestamp?: string
+      dirty?: boolean
     }
   }
-  environment: {
+  system: {
     node: string
     platform: string
+    uptime: number
     memory: {
-      used: number
-      total: number
+      used: string
+      total: string
       percentage: number
     }
-    uptime: number
   }
-  database: {
-    connected: boolean
-    latencyMs?: number
-    error?: string
+  services: {
+    supabase: {
+      status: 'healthy' | 'degraded' | 'unhealthy'
+      message?: string
+      details?: Record<string, unknown>
+      latency?: number
+    }
+    render: {
+      status: 'healthy' | 'degraded' | 'unhealthy'
+      message?: string
+      details?: Record<string, unknown>
+    }
   }
-  config: {
-    supabase: boolean
-    scrapeSecret: boolean
+  resources: {
+    database: {
+      posts: number
+      words: number
+      unprocessedPosts: number
+    }
     apiKeys: {
       youtube: boolean
+      twitter: boolean
       newsapi: boolean
       reddit: boolean
-      twitter: boolean
+    }
+    cronJobs: {
+      lastRssScrape?: string
+      lastApiScrape?: string
     }
   }
 }
 
+export interface SourceHealth {
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  lastSuccess: string | null
+  postsLast24h: number
+  postsLastHour: number
+  errorCount?: number
+  lastError?: string
+  rateLimit?: {
+    remaining: number
+    resetAt: string
+    perHour: number
+  }
+}
+
 export interface ScraperHealth {
-  lastRun?: string
-  nextRun?: string
-  isRunning: boolean
-  stats: {
-    totalRuns: number
-    successfulRuns: number
-    failedRuns: number
-    lastRunDuration?: number
+  status: 'healthy' | 'partially_healthy' | 'unhealthy'
+  timestamp: string
+  sources: {
+    rss: Record<string, SourceHealth>
+    api: Record<string, SourceHealth>
   }
-  feeds: {
-    total: number
-    active: number
-    inactive: number
+  processing: {
+    unprocessedPosts: number
+    processedLastHour: number
+    backlogTrend: 'increasing' | 'stable' | 'decreasing'
   }
-  recentActivity: {
-    feedsAnalyzed: number
-    postsProcessed: number
-    newPosts: number
-    errors: number
-  }
-  errors: Array<{
-    feed: string
-    error: string
-    timestamp: string
-  }>
+  issues: string[]
 }
 
 export interface DatabaseStats {
@@ -84,16 +101,16 @@ export interface DatabaseStats {
 }
 
 export interface ApiSourceStats {
-  source: string
-  enabled: boolean
-  requestCount: number
-  lastRequestTime: Date | null
-  hourlyResetTime: Date
-  remainingRequests: number
-  rateLimitInfo: {
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  lastSuccess: string | null
+  postsLast24h: number
+  postsLastHour: number
+  errorCount?: number
+  lastError?: string
+  rateLimit?: {
+    remaining: number
+    resetAt: string
     perHour: number
-    used: number
-    percentage: number
   }
 }
 

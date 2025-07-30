@@ -3,74 +3,12 @@ import { Database } from '../types/database.types.js'
 import { 
   SystemHealth, 
   ScraperHealth, 
-  DatabaseStats, 
-  ApiSourceStats,
-  HealthCheckResult
+  SourceHealth
 } from '../types/health.types.js'
 import * as os from 'os'
 import * as fs from 'fs/promises'
 import { execSync } from 'child_process'
 
-interface HealthStatus {
-  status: 'healthy' | 'degraded' | 'unhealthy'
-  message?: string
-  details?: Record<string, unknown>
-}
-      total: string
-      percentage: number
-    }
-  }
-  services: {
-    supabase: HealthStatus & { latency?: number }
-    render: HealthStatus
-  }
-  resources: {
-    database: {
-      posts: number
-      words: number
-      unprocessedPosts: number
-    }
-    apiKeys: {
-      youtube: boolean
-      twitter: boolean
-      newsapi: boolean
-      reddit: boolean
-    }
-    cronJobs: {
-      lastRssScrape?: string
-      lastApiScrape?: string
-    }
-  }
-}
-
-interface SourceHealth {
-  status: 'healthy' | 'degraded' | 'unhealthy'
-  lastSuccess: string | null
-  postsLast24h: number
-  postsLastHour: number
-  errorCount?: number
-  lastError?: string
-  rateLimit?: {
-    remaining: number
-    resetAt: string
-    perHour: number
-  }
-}
-
-interface ScraperHealth {
-  status: 'healthy' | 'partially_healthy' | 'unhealthy'
-  timestamp: string
-  sources: {
-    rss: Record<string, SourceHealth>
-    api: Record<string, SourceHealth>
-  }
-  processing: {
-    unprocessedPosts: number
-    processedLastHour: number
-    backlogTrend: 'increasing' | 'stable' | 'decreasing'
-  }
-  issues: string[]
-}
 
 // Cache for health check results with proper typing
 type CacheEntry<T> = { data: T; expires: number }
@@ -160,7 +98,7 @@ async function checkSupabaseHealth(supabase: SupabaseClient): Promise<SystemHeal
       return {
         status: 'unhealthy',
         message: 'Database query failed',
-        details: error
+        details: { error: error.message }
       }
     }
     
@@ -172,7 +110,7 @@ async function checkSupabaseHealth(supabase: SupabaseClient): Promise<SystemHeal
     return {
       status: 'unhealthy',
       message: 'Failed to connect to Supabase',
-      details: error
+      details: { error: String(error) }
     }
   }
 }
@@ -295,13 +233,6 @@ export async function getSystemHealth(supabase: SupabaseClient): Promise<SystemH
   return health
 }
 
-interface SourceHealthMetrics {
-  lastSuccess: string
-  postsLast24h: number
-  postsLastHour: number
-  isHealthy: boolean
-  errors?: string[]
-}
 
 interface HttpError {
   status_code: number
@@ -311,10 +242,10 @@ interface HttpError {
 
 async function getSourceHealthData(
   supabase: SupabaseClient<Database>,
-  apiManager?: { getAllSources: () => string[]; getSourceInfo: (id: string) => ApiSourceStats | null }
+  apiManager?: { getAllSources: () => string[]; getSourceInfo: (id: string) => { config: { name: string }; rateLimit: any } | null }
 ): Promise<{
-  rssHealth: Record<string, SourceHealthMetrics>
-  apiHealth: Record<string, ApiSourceStats>
+  rssHealth: Record<string, SourceHealth>
+  apiHealth: Record<string, SourceHealth>
   errors: HttpError[]
 }> {
   try {
@@ -324,19 +255,12 @@ async function getSourceHealthData(
       .select('source, scraped_at')
       .gte('scraped_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
     
-    // Get recent HTTP errors from net schema
-    const { data: httpErrors } = await supabase
-      .schema('net')
-      .from('_http_response')
-      .select('status_code, error_msg, created')
-      .or('status_code.gte.400,error_msg.not.is.null')
-      .gte('created', new Date(Date.now() - 60 * 60 * 1000).toISOString())
-      .order('created', { ascending: false })
-      .limit(50)
+    // HTTP errors tracking - simplified for now
+    const httpErrors: HttpError[] = []
     
     // Process source statistics
     const sourceMap = new Map<string, {
-      lastSuccess: string
+      lastSuccess: string | null
       postsLast24h: number
       postsLastHour: number
     }>()
@@ -346,17 +270,17 @@ async function getSourceHealthData(
     if (sourceStats) {
       for (const post of sourceStats) {
         const existing = sourceMap.get(post.source) || {
-          lastSuccess: post.scraped_at,
+          lastSuccess: post.scraped_at || null,
           postsLast24h: 0,
           postsLastHour: 0
         }
         
         existing.postsLast24h++
-        if (new Date(post.scraped_at) > oneHourAgo) {
+        if (post.scraped_at && new Date(post.scraped_at) > oneHourAgo) {
           existing.postsLastHour++
         }
         
-        if (new Date(post.scraped_at) > new Date(existing.lastSuccess)) {
+        if (post.scraped_at && (!existing.lastSuccess || new Date(post.scraped_at) > new Date(existing.lastSuccess))) {
           existing.lastSuccess = post.scraped_at
         }
         
@@ -364,8 +288,8 @@ async function getSourceHealthData(
       }
     }
     
-    const rssHealth: Record<string, SourceHealthMetrics> = {}
-    const apiHealth: Record<string, ApiSourceStats> = {}
+    const rssHealth: Record<string, SourceHealth> = {}
+    const apiHealth: Record<string, SourceHealth> = {}
     
     // Define known sources
     const rssSources = [
@@ -417,7 +341,7 @@ async function getSourceHealthData(
           apiHealth[source] = {
             status: stats.postsLastHour > 0 ? 'healthy' : 
                     stats.postsLast24h > 0 ? 'degraded' : 'unhealthy',
-            lastSuccess: stats.lastSuccess || null,
+            lastSuccess: stats?.lastSuccess || null,
             postsLast24h: stats.postsLast24h || 0,
             postsLastHour: stats.postsLastHour || 0
           }
@@ -428,7 +352,7 @@ async function getSourceHealthData(
     return {
       rssHealth,
       apiHealth,
-      errors: httpErrors || []
+      errors: httpErrors
     }
   } catch (error) {
     console.error('Failed to get source health data:', error)
@@ -438,7 +362,7 @@ async function getSourceHealthData(
 
 export async function getScraperHealth(
   supabase: SupabaseClient<Database>, 
-  apiManager?: { getAllSources: () => string[]; getSourceInfo: (id: string) => ApiSourceStats | null }
+  apiManager?: { getAllSources: () => string[]; getSourceInfo: (id: string) => { config: { name: string }; rateLimit: any } | null }
 ): Promise<ScraperHealth> {
   const cached = getCached<ScraperHealth>('scraper-health')
   if (cached) return cached
@@ -459,7 +383,7 @@ export async function getScraperHealth(
     for (const post of processingStats) {
       if (!post.processed) {
         unprocessedPosts++
-      } else if (new Date(post.scraped_at) > oneHourAgo) {
+      } else if (post.scraped_at && new Date(post.scraped_at) > oneHourAgo) {
         processedLastHour++
       }
     }

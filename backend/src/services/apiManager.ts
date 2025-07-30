@@ -138,7 +138,7 @@ export async function scrapeApi(
   
   // Temporarily monkey-patch the source to use our logging
   const originalMakeRequest = source.makeRequest.bind(source)
-  source.makeRequest = async function(endpoint: string, params: Record<string, string> = {}) {
+  const patchedMakeRequest = async function(endpoint: string, params: Record<string, string> = {}) {
     const startTime = Date.now()
     const result = await originalMakeRequest(endpoint, params)
     
@@ -154,10 +154,13 @@ export async function scrapeApi(
     return result
   }
   
+  // Patch the source temporarily
+  ;(source as any).makeRequest = patchedMakeRequest
+  
   const result = await source.makeRequest(endpoint, params)
   
   // Restore original method
-  source.makeRequest = originalMakeRequest
+  ;(source as any).makeRequest = originalMakeRequest
   
   return result
 }

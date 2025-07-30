@@ -7,7 +7,7 @@ interface Post {
   url: string
 }
 
-export function transformApiDataToPosts(apiResponse: ApiResponse): Post[] {
+export function transformApiDataToPosts(apiResponse: ApiResponse<any>): Post[] {
   if (!apiResponse.success || !apiResponse.data) {
     return []
   }

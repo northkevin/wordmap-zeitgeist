@@ -348,9 +348,21 @@ app.get("/api/words", async (_req, res) => {
           entry.count += ws.count;
           entry.sources.push({ source: ws.source, count: ws.count });
         });
-        words = Array.from(wordMap.values())
+        const aggregatedWords = Array.from(wordMap.values())
           .sort((a, b) => b.count - a.count)
           .slice(0, limit);
+        
+        // Transform to match WordWithSource type
+        words = aggregatedWords.map(w => ({
+          word_id: w.id,
+          count: w.count,
+          last_seen: w.last_seen,
+          source: w.sources[0]?.source || 'unknown',
+          words: {
+            word: w.word,
+            id: w.id
+          }
+        }));
       }
     } else {
       // Query for all time - use the original simple approach
