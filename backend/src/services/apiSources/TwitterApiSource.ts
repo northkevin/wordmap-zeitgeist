@@ -1,7 +1,7 @@
 import { ApiSource } from '../apiManager.js'
 
 export class TwitterApiSource extends ApiSource {
-  protected async parseResponse(data: any, _endpoint: string, _params: Record<string, any>): Promise<any> {
+  protected async parseResponse(data: any, endpoint: string, _params: Record<string, any>): Promise<any> {
     // Handle different Twitter API v2 endpoints
     if (endpoint.includes('tweets/search') || endpoint.includes('tweets/sample')) {
       return {
