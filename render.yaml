@@ -19,8 +19,9 @@ services:
   # Frontend Static Site
   - type: static
     name: wordmap-zeitgeist-frontend
-    buildCommand: cd frontend && npm ci && npm run build
-    staticPublishPath: ./frontend/dist
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
     envVars:
       - key: NODE_ENV
         value: production
@@ -28,6 +29,26 @@ services:
       - type: rewrite
         source: /api/*
         destination: https://wordmap-zeitgeist-backend.onrender.com$1
+      # Serve static assets directly (no rewrite)
+      - type: rewrite
+        source: /favicon.ico
+        destination: /favicon.ico
+      - type: rewrite
+        source: /favicon.svg
+        destination: /favicon.svg
+      - type: rewrite
+        source: /favicon-16x16.png
+        destination: /favicon-16x16.png
+      - type: rewrite
+        source: /favicon-32x32.png
+        destination: /favicon-32x32.png
+      - type: rewrite
+        source: /site.webmanifest
+        destination: /site.webmanifest
+      - type: rewrite
+        source: /assets/*
+        destination: /assets/*
+      # Catch-all for React Router (must be last)
       - type: rewrite
         source: /*
         destination: /index.html

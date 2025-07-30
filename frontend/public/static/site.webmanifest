@@ -1,0 +1,26 @@
+{
+  "name": "Wordmap Zeitgeist",
+  "short_name": "Wordmap",
+  "description": "Visualizing the internet's zeitgeist through real-time word frequency analysis",
+  "icons": [
+    {
+      "src": "/static/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "theme_color": "#1a1a2e",
+  "background_color": "#111827",
+  "display": "standalone",
+  "start_url": "/"
+}
