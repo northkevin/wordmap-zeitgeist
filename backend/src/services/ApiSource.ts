@@ -1,40 +1,10 @@
 import PQueue from 'p-queue'
+import { ApiConfig, ApiResponse, RequestLog } from '../types/api.types.js'
 
-export interface ApiConfig {
-  name: string
-  baseUrl: string
-  authType: 'header' | 'query' | 'oauth' | 'bearer'
-  keyParam?: string
-  headerName?: string
-  rateLimit: {
-    perHour: number
-    delay: number // milliseconds between requests
-  }
-  defaultHeaders?: Record<string, string>
-}
+// Re-export types for backward compatibility
+export type { ApiConfig, ApiResponse, RequestLog } from '../types/api.types.js'
 
-export interface ApiResponse {
-  source: string
-  data: any
-  timestamp: Date
-  success: boolean
-  error?: string
-  rateLimitInfo?: {
-    remaining: number
-    resetTime: Date
-  }
-}
-
-export interface RequestLog {
-  source: string
-  endpoint: string
-  timestamp: Date
-  success: boolean
-  responseTime: number
-  error?: string
-}
-
-export abstract class ApiSource {
+export abstract class ApiSource<T> {
   protected config: ApiConfig
   protected apiKey: string
   protected queue: PQueue
@@ -51,9 +21,9 @@ export abstract class ApiSource {
     })
   }
 
-  protected abstract parseResponse(data: any, endpoint: string, params: Record<string, any>): Promise<any>
+  protected abstract parseResponse(data: unknown, endpoint: string, params: Record<string, string>): Promise<T>
 
-  protected buildUrl(endpoint: string, params: Record<string, any> = {}): string {
+  protected buildUrl(endpoint: string, params: Record<string, string> = {}): string {
     const url = new URL(`${this.config.baseUrl}${endpoint}`)
     
     // Add query parameters
@@ -103,7 +73,7 @@ export abstract class ApiSource {
     }
   }
 
-  public async makeRequest(endpoint: string, params: Record<string, any> = {}): Promise<ApiResponse> {
+  public async makeRequest(endpoint: string, params: Record<string, string> = {}): Promise<ApiResponse<T>> {
     const startTime = Date.now()
     const log: RequestLog = {
       source: this.config.name,
@@ -155,7 +125,7 @@ export abstract class ApiSource {
 
       return {
         source: this.config.name,
-        data: null,
+        data: null as unknown as T,
         timestamp: new Date(),
         success: false,
         error: log.error

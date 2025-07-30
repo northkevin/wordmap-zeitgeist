@@ -1,12 +1,13 @@
 import { ApiSource, ApiResponse } from '../ApiSource.js'
+import { ApiConfig, RedditResponse, RedditPost, OAuthToken } from '../../types/api.types.js'
 
-export class RedditApiSource extends ApiSource {
+export class RedditApiSource extends ApiSource<RedditResponse> {
   private accessToken: string = ''
   private tokenExpiry: Date | null = null
   private clientId: string
   private clientSecret: string
 
-  constructor(config: any, apiKey: string) {
+  constructor(config: ApiConfig, apiKey: string) {
     super(config, apiKey)
     this.clientId = process.env.REDDIT_CLIENT_ID || ''
     this.clientSecret = process.env.REDDIT_CLIENT_SECRET || ''
@@ -37,7 +38,7 @@ export class RedditApiSource extends ApiSource {
       throw new Error(`Reddit OAuth failed: ${response.status}`)
     }
 
-    const data = await response.json()
+    const data = await response.json() as OAuthToken
     
     if (!data.access_token) {
       throw new Error('Reddit OAuth response missing access token')
@@ -54,7 +55,7 @@ export class RedditApiSource extends ApiSource {
     return headers
   }
 
-  public async makeRequest(endpoint: string, params: Record<string, any> = {}): Promise<ApiResponse> {
+  public async makeRequest(endpoint: string, params: Record<string, string> = {}): Promise<ApiResponse<RedditResponse>> {
     try {
       // Ensure we have a valid access token before making the request
       await this.ensureAccessToken()
@@ -73,10 +74,29 @@ export class RedditApiSource extends ApiSource {
     }
   }
 
-  protected async parseResponse(data: any, _endpoint: string, _params: Record<string, any>): Promise<any> {
-    if (data.data?.children) {
+  protected async parseResponse(data: unknown, _endpoint: string, _params: Record<string, string>): Promise<RedditResponse> {
+    const redditData = data as {
+      data?: {
+        children?: Array<{
+          data: {
+            id: string
+            title: string
+            selftext: string
+            url: string
+            subreddit: string
+            author: string
+            score: number
+            num_comments: number
+            created_utc: number
+            permalink: string
+          }
+        }>
+      }
+    }
+    
+    if (redditData.data?.children) {
       return {
-        posts: data.data.children.map((child: any) => ({
+        posts: redditData.data.children.map((child): RedditPost => ({
           id: child.data.id,
           title: child.data.title,
           selftext: child.data.selftext,
@@ -90,6 +110,6 @@ export class RedditApiSource extends ApiSource {
         }))
       }
     }
-    return data
+    return { posts: [] }
   }
 }

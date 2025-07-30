@@ -1,39 +1,87 @@
 import { ApiSource } from '../ApiSource.js'
+import { TwitterResponse, Tweet, TwitterUser } from '../../types/api.types.js'
 
-export class TwitterApiSource extends ApiSource {
-  protected async parseResponse(data: any, endpoint: string, _params: Record<string, any>): Promise<any> {
+// Twitter API v2 raw response types
+interface TwitterApiTweet {
+  id: string
+  text: string
+  author_id?: string
+  created_at?: string
+  public_metrics?: {
+    retweet_count: number
+    reply_count: number
+    like_count: number
+    quote_count: number
+  }
+  context_annotations?: Array<{
+    domain: { id: string; name: string; description?: string }
+    entity: { id: string; name: string; description?: string }
+  }>
+  entities?: Record<string, unknown>
+  referenced_tweets?: Array<{
+    type: string
+    id: string
+  }>
+}
+
+interface TwitterApiUser {
+  id: string
+  name: string
+  username: string
+  created_at?: string
+  description?: string
+  public_metrics?: {
+    followers_count: number
+    following_count: number
+    tweet_count: number
+    listed_count: number
+  }
+  verified?: boolean
+}
+
+interface TwitterApiResponse {
+  data?: TwitterApiTweet[] | TwitterApiUser[]
+  includes?: {
+    users?: TwitterApiUser[]
+  }
+  meta?: Record<string, unknown>
+}
+
+export class TwitterApiSource extends ApiSource<TwitterResponse> {
+  protected async parseResponse(data: unknown, endpoint: string, _params: Record<string, string>): Promise<TwitterResponse> {
+    const apiResponse = data as TwitterApiResponse
+    
     // Handle different Twitter API v2 endpoints
     if (endpoint.includes('tweets/search') || endpoint.includes('tweets/sample')) {
+      const tweets = apiResponse.data as TwitterApiTweet[] | undefined
       return {
-        tweets: data.data?.map((tweet: any) => ({
+        tweets: tweets?.map((tweet): Tweet => ({
           id: tweet.id,
           text: tweet.text,
-          author_id: tweet.author_id,
-          created_at: tweet.created_at,
-          public_metrics: tweet.public_metrics,
-          context_annotations: tweet.context_annotations,
-          entities: tweet.entities,
-          referenced_tweets: tweet.referenced_tweets
+          created_at: tweet.created_at || new Date().toISOString(),
+          author_id: tweet.author_id || '',
+          public_metrics: tweet.public_metrics
         })) || [],
-        includes: data.includes,
-        meta: data.meta
+        users: apiResponse.includes?.users?.map((user): TwitterUser => ({
+          id: user.id,
+          name: user.name,
+          username: user.username
+        }))
       }
     }
 
     if (endpoint.includes('users')) {
+      const users = apiResponse.data as TwitterApiUser[] | undefined
       return {
-        users: data.data?.map((user: any) => ({
+        tweets: [],
+        users: users?.map((user): TwitterUser => ({
           id: user.id,
           name: user.name,
-          username: user.username,
-          created_at: user.created_at,
-          description: user.description,
-          public_metrics: user.public_metrics,
-          verified: user.verified
+          username: user.username
         })) || []
       }
     }
 
-    return data
+    return { tweets: [] }
   }
 }
