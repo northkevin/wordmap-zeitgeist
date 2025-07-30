@@ -50,6 +50,39 @@ export type Database = {
         }
         Relationships: []
       }
+      scrape_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          posts_found: number | null
+          source: string
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          posts_found?: number | null
+          source: string
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          posts_found?: number | null
+          source?: string
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       test_words: {
         Row: {
           count: number | null
@@ -129,6 +162,18 @@ export type Database = {
       }
     }
     Views: {
+      latest_scrape_status: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          posts_found: number | null
+          runtime_ms: number | null
+          source: string | null
+          started_at: string | null
+          status: string | null
+        }
+        Relationships: []
+      }
       source_stats: {
         Row: {
           last_updated: string | null
