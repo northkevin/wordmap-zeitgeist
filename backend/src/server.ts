@@ -445,7 +445,6 @@ app.get("/api/words", async (_req, res) => {
       }
       
       // Skip the aggregation step since we already have aggregated data
-      const { data, error: queryError } = { data: null, error: null };
 
       // No additional processing needed - we already have the words formatted
     }
