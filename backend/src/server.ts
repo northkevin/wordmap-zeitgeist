@@ -10,6 +10,7 @@ import {
   reprocessOrphanedPosts,
 } from "./services/wordProcessor.js";
 import { apiManager } from "./services/apiManager.js";
+import { getSystemHealth, getScraperHealth } from "./services/healthCheck.js";
 
 // Load environment variables
 dotenv.config();
@@ -238,10 +239,42 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint
+// Health check endpoints
 app.get("/health", (req, res) => {
   console.log("Health check requested");
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Comprehensive system health check
+app.get("/health/system", async (req, res) => {
+  console.log("System health check requested");
+  try {
+    const health = await getSystemHealth(supabase);
+    res.json(health);
+  } catch (error) {
+    console.error("System health check failed:", error);
+    res.status(500).json({
+      status: "unhealthy",
+      timestamp: new Date().toISOString(),
+      error: "Failed to retrieve system health"
+    });
+  }
+});
+
+// Scraper health check
+app.get("/health/scrapers", async (req, res) => {
+  console.log("Scraper health check requested");
+  try {
+    const health = await getScraperHealth(supabase, apiManager);
+    res.json(health);
+  } catch (error) {
+    console.error("Scraper health check failed:", error);
+    res.status(500).json({
+      status: "unhealthy",
+      timestamp: new Date().toISOString(),
+      error: "Failed to retrieve scraper health"
+    });
+  }
 });
 
 // Get words endpoint
@@ -680,6 +713,8 @@ async function startServer() {
     console.log("🎉 Server Started Successfully!");
     console.log(`📍 Server running on port ${port}`);
     console.log(`🏥 Health check: http://localhost:${port}/health`);
+    console.log(`💻 System health: http://localhost:${port}/health/system`);
+    console.log(`🔍 Scraper health: http://localhost:${port}/health/scrapers`);
     console.log(`📊 Words API: http://localhost:${port}/api/words`);
     console.log(`📈 Sources API: http://localhost:${port}/api/sources`);
     console.log(`🔄 Scrape API: http://localhost:${port}/api/scrape`);
