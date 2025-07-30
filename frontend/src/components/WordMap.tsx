@@ -87,7 +87,7 @@ const WordMap: React.FC<WordMapProps> = ({ words, loading }) => {
             whileHover={{
               scale: 1.2,
               textShadow: "0 0 20px currentColor",
-              transition: { duration: 0.2 },
+              transition: { duration: 0.1 },
             }}
             className="cursor-pointer font-bold select-none hover:z-10 relative"
             style={{
@@ -95,7 +95,7 @@ const WordMap: React.FC<WordMapProps> = ({ words, loading }) => {
               color: word.color,
               textShadow: `0 0 10px ${word.color}40`,
             }}
-            title={`${word.word}: ${word.count} mentions`}
+            title={`${word.word}: ${word.count.toLocaleString()} mentions${word.source ? ` from ${word.source}` : ''}`}
           >
             {word.word}
           </motion.span>

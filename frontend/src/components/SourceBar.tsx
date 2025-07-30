@@ -42,7 +42,7 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
     return Object.entries(sourceCounts)
       .map(([name, wordCount]) => ({ name, wordCount }))
       .sort((a, b) => b.wordCount - a.wordCount)
-      .slice(0, 10); // Show top 10 sources
+      .slice(0, 6); // Show top 6 sources to allow full names
   }, [sourceCounts]);
 
   if (loading) {
@@ -71,7 +71,6 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
               className="flex flex-col items-center group"
-              title={`${source.name}: ${source.wordCount.toLocaleString()} mentions`}
             >
               <div
                 className="mb-1"
@@ -84,7 +83,7 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
               <span className="text-gray-400 text-xs font-medium">
                 {formatWordCount(source.wordCount)}
               </span>
-              <span className="text-gray-500 text-[10px] mt-0.5 truncate max-w-[80px] text-center">
+              <span className="text-gray-500 text-[10px] mt-0.5 truncate max-w-[100px] text-center leading-tight">
                 {getSourceLabel(source.name)}
               </span>
             </motion.div>
