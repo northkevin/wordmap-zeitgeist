@@ -305,6 +305,9 @@ app.get("/api/words", async (_req, res) => {
 
     if (timeRange === "24h") {
       // Query for last 24 hours
+      const timestamp24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      console.log(`🕐 24h cutoff timestamp: ${timestamp24h}`);
+      
       const { data, error: queryError } = await supabase
         .from("word_sources")
         .select(
@@ -316,10 +319,18 @@ app.get("/api/words", async (_req, res) => {
           words!inner(word, id)
         `
         )
-        .gte(
-          "last_seen",
-          new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-        );
+        .gte("last_seen", timestamp24h);
+        
+      console.log(`📊 Raw query returned ${data?.length || 0} word-source records`);
+      
+      // Debug: Check for API sources in raw data
+      const apiRecords = data?.filter(ws => ['YouTube', 'NewsAPI', 'Twitter'].includes(ws.source)) || [];
+      console.log(`🔍 API records in raw data: ${apiRecords.length} (YouTube: ${apiRecords.filter(r => r.source === 'YouTube').length}, NewsAPI: ${apiRecords.filter(r => r.source === 'NewsAPI').length}, Twitter: ${apiRecords.filter(r => r.source === 'Twitter').length})`);
+      
+      if (apiRecords.length > 0) {
+        const topApiWords = apiRecords.slice(0, 3).map(r => `${r.words.word}:${r.count} (${r.source})`);
+        console.log(`🎯 Top API words in raw data: ${topApiWords.join(', ')}`);
+      }
 
       if (queryError) {
         error = queryError;
