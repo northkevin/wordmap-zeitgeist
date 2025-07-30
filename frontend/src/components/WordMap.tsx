@@ -97,7 +97,7 @@ const WordMap: React.FC<WordMapProps> = ({ words, loading }) => {
               color: word.color,
               textShadow: `0 0 10px ${word.color}40`,
             }}
-            title={`${word.word}: ${word.count.toLocaleString()} mentions${word.sourceCount ? ` from ${word.sourceCount} ${word.sourceCount === 1 ? 'source' : 'sources'}` : word.source ? ` from ${word.source}` : ''}`}
+            title={`${word.word}: ${word.count.toLocaleString()} total${word.sources && word.sources.length > 0 ? `\n${word.sources.sort((a, b) => b.count - a.count).map(s => `${s.source}: ${s.count.toLocaleString()}`).join(' • ')}` : word.source ? ` from ${word.source}` : ''}`}
           >
             {word.word}
           </motion.span>
