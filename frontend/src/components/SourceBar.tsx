@@ -57,6 +57,10 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
     return null;
   }
 
+  // Calculate total sources count
+  const totalSources = Object.keys(sourceCounts).length;
+  const hiddenCount = totalSources - sources.length;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -92,6 +96,22 @@ const SourceBar: React.FC<SourceBarProps> = ({ words, loading }) => {
             )}
           </React.Fragment>
         ))}
+        
+        {hiddenCount > 0 && (
+          <>
+            <span className="text-gray-600 text-xs self-center">•</span>
+            <motion.div 
+              className="flex flex-col items-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+            >
+              <span className="text-gray-500 text-xs font-medium mb-2">
+                + {hiddenCount} more
+              </span>
+            </motion.div>
+          </>
+        )}
       </div>
     </motion.div>
   );

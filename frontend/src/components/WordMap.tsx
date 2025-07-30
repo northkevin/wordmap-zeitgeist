@@ -28,6 +28,8 @@ const WordMap: React.FC<WordMapProps> = ({ words, loading }) => {
         word: word.words.word,
         count: word.count,
         source: word.source,
+        sources: word.sources,
+        sourceCount: word.sourceCount,
         fontSize,
         opacity,
         color,
@@ -95,7 +97,7 @@ const WordMap: React.FC<WordMapProps> = ({ words, loading }) => {
               color: word.color,
               textShadow: `0 0 10px ${word.color}40`,
             }}
-            title={`${word.word}: ${word.count.toLocaleString()} mentions${word.source ? ` from ${word.source}` : ''}`}
+            title={`${word.word}: ${word.count.toLocaleString()} mentions${word.sourceCount ? ` from ${word.sourceCount} ${word.sourceCount === 1 ? 'source' : 'sources'}` : word.source ? ` from ${word.source}` : ''}`}
           >
             {word.word}
           </motion.span>

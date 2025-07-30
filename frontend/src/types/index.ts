@@ -3,6 +3,8 @@ export interface WordData {
   count: number
   last_seen: string | null
   source: string
+  sources?: Array<{ source: string; count: number }>
+  sourceCount?: number
   words: {
     word: string
     id: string

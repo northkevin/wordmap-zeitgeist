@@ -153,8 +153,9 @@ function StatusPage() {
                   <div className="mb-6">
                     <h3 className="text-lg font-medium mb-3 text-gray-300">RSS Feeds</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(scraperHealth.sources?.rss || {}).map(
-                        ([source, health]) => (
+                      {Object.entries(scraperHealth.sources?.rss || {})
+                        .sort(([, a], [, b]) => b.postsLast24h - a.postsLast24h)
+                        .map(([source, health]) => (
                           <div
                             key={source}
                             className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700"
@@ -191,8 +192,9 @@ function StatusPage() {
                   <div>
                     <h3 className="text-lg font-medium mb-3 text-gray-300">API Sources</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(scraperHealth.sources?.api || {}).map(
-                        ([source, health]) => (
+                      {Object.entries(scraperHealth.sources?.api || {})
+                        .sort(([, a], [, b]) => b.postsLast24h - a.postsLast24h)
+                        .map(([source, health]) => (
                           <div
                             key={source}
                             className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700"
