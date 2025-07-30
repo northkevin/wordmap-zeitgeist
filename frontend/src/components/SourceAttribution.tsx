@@ -28,10 +28,8 @@ const sourceUrls: Record<string, string> = {
   TechCrunch: "https://techcrunch.com",
   "BBC News": "https://bbc.com/news",
   Wired: "https://wired.com",
-  CNN: "https://cnn.com",
-  "CNN Top Stories": "https://cnn.com",
-  "CNN World": "https://cnn.com/world",
-  "O'Reilly Radar": "https://www.oreilly.com/radar/",
+  // CNN sources removed - stale feeds
+  // "O'Reilly Radar": "https://www.oreilly.com/radar/", // Feed discontinued
   "The Guardian UK": "https://theguardian.com/uk",
   "The Guardian World": "https://theguardian.com/world",
   "The Guardian US": "https://theguardian.com/us-news",

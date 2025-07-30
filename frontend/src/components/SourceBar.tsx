@@ -27,22 +27,20 @@ const getSourceLabel = (name: string): string => {
     "Reddit r/popular": "r/pop",
     "Reddit r/worldnews": "r/news",
     "Reddit Tech Combined": "r/tech",
-    "CNN Top Stories": "CNN",
-    "CNN World": "CNN",
+    // CNN sources removed - stale feeds
     "The Guardian UK": "Guard",
     "The Guardian World": "Guard",
     "The Guardian US": "Guard",
     "Hacker News": "HN",
     "BBC News": "BBC",
     "NPR Main News": "NPR",
-    "O'Reilly Radar": "O'R",
+    // "O'Reilly Radar": "O'R", // Feed discontinued
     TechCrunch: "TC",
     Wired: "Wired",
     YouTube: "YT",
     Twitter: "X",
     NewsAPI: "News",
     Reddit: "Reddit",
-    CNN: "CNN",
   };
   
   return labelMap[name] || name.substring(0, 5);

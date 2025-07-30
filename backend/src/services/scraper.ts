@@ -18,17 +18,14 @@ interface ParsedFeed {
 }
 
 const RSS_FEEDS: RSSFeed[] = [
-  // Original feeds
-  { url: 'https://feeds.feedburner.com/oreilly/radar', source: 'O\'Reilly Radar', type: 'rss' },
+  // Tech feeds
   { url: 'https://techcrunch.com/feed/', source: 'TechCrunch', type: 'rss' },
   { url: 'https://www.wired.com/feed/rss', source: 'Wired', type: 'rss' },
-  { url: 'https://rss.cnn.com/rss/edition.rss', source: 'CNN', type: 'rss' },
   { url: 'https://feeds.bbci.co.uk/news/rss.xml', source: 'BBC News', type: 'rss' },
   { url: 'https://hnrss.org/frontpage', source: 'Hacker News', type: 'rss' },
   
-  // New CNN feeds
-  { url: 'http://rss.cnn.com/rss/cnn_topstories.rss', source: 'CNN Top Stories', type: 'rss' },
-  { url: 'http://rss.cnn.com/rss/edition_world.rss', source: 'CNN World', type: 'rss' },
+  // Note: O'Reilly Radar feed discontinued (404)
+  // Note: CNN RSS feeds are stale (last updated 2023)
   
   // Guardian feeds
   { url: 'https://www.theguardian.com/uk/rss', source: 'The Guardian UK', type: 'rss' },

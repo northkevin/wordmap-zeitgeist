@@ -1,11 +1,9 @@
 import React from "react";
 import {
   SiReddit,
-  SiCnn,
   SiTechcrunch,
   SiYoutube,
   SiTheguardian,
-  SiOreilly,
   SiX,
 } from "react-icons/si";
 import { FaNewspaper, FaRss } from "react-icons/fa";
@@ -28,10 +26,10 @@ export const sourceIcons: Record<string, SourceIconConfig> = {
   "Reddit Tech Combined": { icon: <SiReddit />, color: "#FF4500" },
   Reddit: { icon: <SiReddit />, color: "#FF4500" },
 
-  // CNN sources
-  CNN: { icon: <SiCnn />, color: "#CC0000" },
-  "CNN Top Stories": { icon: <SiCnn />, color: "#CC0000" },
-  "CNN World": { icon: <SiCnn />, color: "#CC0000" },
+  // CNN sources (removed - feeds are stale)
+  // CNN: { icon: <SiCnn />, color: "#CC0000" },
+  // "CNN Top Stories": { icon: <SiCnn />, color: "#CC0000" },
+  // "CNN World": { icon: <SiCnn />, color: "#CC0000" },
 
   // Guardian sources
   "The Guardian UK": { icon: <SiTheguardian />, color: "#052962" },
@@ -42,7 +40,7 @@ export const sourceIcons: Record<string, SourceIconConfig> = {
   TechCrunch: { icon: <SiTechcrunch />, color: "#0A9E01" },
   "Hacker News": { icon: <FaRss />, color: "#FF6600", fallbackLetter: "HN" },
   Wired: { icon: <RiNewspaperLine />, color: "#000000", fallbackLetter: "W" },
-  "O'Reilly Radar": { icon: <SiOreilly />, color: "#D3002D" },
+  // "O'Reilly Radar": { icon: <SiOreilly />, color: "#D3002D" }, // Feed discontinued
 
   // News sources
   "BBC News": { icon: <BsNewspaper />, color: "#B80000", fallbackLetter: "BBC" },
