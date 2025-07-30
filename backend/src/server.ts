@@ -397,25 +397,58 @@ app.get("/api/words", async (_req, res) => {
       // Query for all time - use same aggregation approach as 24h for consistency
       console.log(`📊 Fetching ALL TIME data...`);
       
+      // For all time, we need to get the aggregated words first
       const { data, error: queryError } = await supabase
-        .from("word_sources")
-        .select(
-          `
-          word_id,
-          count,
-          last_seen,
-          source,
-          words!inner(word, id)
-        `
-        )
+        .from("words")
+        .select("id, word, count")
         .order("count", { ascending: false })
-        .limit(5000); // Limit to top 5000 records to avoid memory issues
+        .limit(200); // Get top 200 words by total count
         
-      console.log(`📊 All time query returned ${data?.length || 0} word-source records`);
+      console.log(`📊 Top words query returned ${data?.length || 0} words`);
       
+      if (!queryError && data && data.length > 0) {
+        // Now get the source breakdown for these top words
+        const wordIds = data.map(w => w.id);
+        const { data: sourceData, error: sourceError } = await supabase
+          .from("word_sources")
+          .select("word_id, count, last_seen, source")
+          .in("word_id", wordIds);
+          
+        console.log(`📊 Source data query returned ${sourceData?.length || 0} records`);
+        
+        // Transform to match expected format
+        const wordSourceMap = new Map<string, any[]>();
+        sourceData?.forEach(ws => {
+          if (!wordSourceMap.has(ws.word_id)) {
+            wordSourceMap.set(ws.word_id, []);
+          }
+          wordSourceMap.get(ws.word_id)!.push(ws);
+        });
+        
+        // Combine words with their sources
+        const combinedData: any[] = [];
+        data.forEach(word => {
+          const sources = wordSourceMap.get(word.id) || [];
+          sources.forEach(source => {
+            combinedData.push({
+              word_id: word.id,
+              count: source.count,
+              last_seen: source.last_seen,
+              source: source.source,
+              words: { id: word.id, word: word.word }
+            });
+          });
+        });
+        
+        // Use the combined data for aggregation
+        data = combinedData;
+      }
+        
       // Debug: Check for API sources in all time data
-      const apiRecords = data?.filter(ws => ['YouTube', 'NewsAPI', 'Twitter'].includes(ws.source)) || [];
-      console.log(`🔍 API records in all time data: ${apiRecords.length} (YouTube: ${apiRecords.filter(r => r.source === 'YouTube').length}, NewsAPI: ${apiRecords.filter(r => r.source === 'NewsAPI').length}, Twitter: ${apiRecords.filter(r => r.source === 'Twitter').length})`);
+      if (data) {
+        const apiRecords = data.filter(ws => ['YouTube', 'NewsAPI', 'Twitter'].includes(ws.source)) || [];
+        console.log(`🔍 API records in combined data: ${apiRecords.length} (YouTube: ${apiRecords.filter(r => r.source === 'YouTube').length}, NewsAPI: ${apiRecords.filter(r => r.source === 'NewsAPI').length}, Twitter: ${apiRecords.filter(r => r.source === 'Twitter').length})`);
+      }
 
       if (queryError) {
         error = queryError;
